@@ -1,0 +1,2548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMM Allstars Multi-POV Hub</title>
+<!-- Core Twitch SDK Engine loaded explicitly in the head -->
+<script src="https://twitch.tv"></script>
+<!-- Corrected Production Supabase Client Engine Asset Link -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #09090b;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #1f1f23;
+            border-right: 2px solid #2d2d34;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 20px;
+            background-color: #18181b;
+            border-bottom: 1px solid #2d2d34;
+        }
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            color: #9146ff;
+        }
+        .team-menu {
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .team-group {
+            margin-bottom: 20px;
+        }
+        .team-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+        .team-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            text-align: left;
+            background-color: #2a2a30;
+            color: #fff;
+            border: 1px solid #3a3a42;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .team-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .team-banner-star, .favorite-star {
+            width: 28px;
+            height: 28px;
+            background: none;
+            color: #adadb8;
+            border: 1px solid #3a3a42;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+            font-size: 0.95rem;
+            line-height: 1;
+            vertical-align: middle;
+            margin: 0;
+        }
+        .team-collapse-btn {
+            width: 28px;
+            height: 28px;
+            background: none;
+            border: 1px solid #3a3a42;
+            border-radius: 4px;
+            color: #adadb8;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, color 0.2s, transform 0.2s;
+        }
+        .team-collapse-btn:hover, .team-banner-star:hover, .favorite-star:hover {
+            background-color: #9146ff;
+            color: #fff;
+            border-color: #9146ff;
+        }
+        .team-group.collapsed .team-collapse-btn {
+            transform: rotate(-90deg);
+        }
+        .team-group.collapsed .member-list {
+            display: none;
+        }
+        .team-banner-star:hover {
+            background-color: #9146ff;
+            color: #fff;
+        }
+        .team-banner-star.active {
+            color: #f5c518;
+            border-color: #f5c518;
+            background-color: #1f1f23;
+        }
+        .team-btn:hover {
+            background-color: #9146ff;
+        }
+        .favorites-section {
+            margin-bottom: 16px;
+            padding: 0 8px;
+        }
+        .favorites-section .favorite-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .favorites-section h3 {
+            font-size: 0.95rem;
+            margin: 0;
+            color: #f5c518;
+        }
+        .favorite-collapse-btn, .team-collapse-btn {
+            background: none;
+            border: none;
+            color: #adadb8;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 4px;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+        .favorites-section.collapsed .favorite-collapse-btn {
+            transform: rotate(-90deg);
+        }
+        .favorites-section.collapsed .favorite-list {
+            display: none;
+        }
+        .favorite-list, .member-list {
+            list-style: none;
+            margin-top: 5px;
+            padding-left: 0;
+        }
+        .favorite-list li, .member-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            font-size: 0.85rem;
+            color: #adadb8;
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+        .favorite-list li:hover, .member-list li:hover {
+            color: #fff;
+            background-color: #26262c;
+        }
+        .member-btn {
+            background: none;
+            border: none;
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+            flex: 1;
+            padding: 0;
+            font: inherit;
+        }
+        .favorite-star {
+            width: 28px;
+            height: 28px;
+            background: none;
+            border: 1px solid #3a3a42;
+            border-radius: 4px;
+            color: #adadb8;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .favorite-star.active {
+            border-color: #f5c518;
+            color: #f5c518;
+        }
+        .favorite-star:hover {
+            background-color: #9146ff;
+            color: #fff;
+            border-color: #9146ff;
+        }
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border-right: 2px solid #2d2d34;
+        }
+        header {
+            background-color: #18181b;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2d2d34;
+        }
+header h1 { font-size: 1.1rem; } 
+
+.layout-toggle-btn { 
+  padding: 8px 12px; 
+  background-color: #000; 
+  color: #fff; 
+  border: 1px solid #53535f; 
+  border-radius: 4px; 
+  cursor: pointer;
+}
+
+/* ========================================================================= */
+/* MODAL LAYERING & HOVER INTERACTION SHIELDS */
+/* ========================================================================= */
+
+/* Gives your main background modal a base structural depth layer */
+#backgroundModal {
+  z-index: 1000 !important;
+}
+
+/* Forces your login modal to float on a completely separate higher layer */
+#authModal {
+  z-index: 2000 !important;
+}
+
+/* Safe protection layout switch: ensures invisible modals completely drop their hover mouse actions */
+.settings-modal {
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.settings-modal:not(.open) {
+  pointer-events: none !important;
+  display: none !important; /* Prevents hidden elements from absorbing background clicks */
+}
+	        main {
+            flex-grow: 1;
+            min-width: 0;
+            min-height: 0;
+            padding: 10px;
+            background-color: transparent;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            display: grid;
+            gap: 10px;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        .grid-layout {
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            min-width: 1250px;
+        }
+        .grid-layout #slot1 { grid-column: span 2; position: relative; z-index: 1; }
+        .grid-layout #slot2 { grid-column: span 2; position: relative; z-index: 1; }
+        .grid-layout #slot3 { grid-column: span 2; position: relative; z-index: 1; }
+        .grid-layout #slot4 { grid-column: span 3; position: relative; z-index: 1; }
+        .grid-layout #slot5 { grid-column: span 3; position: relative; z-index: 1; }
+        
+        .focus-layout {
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr;
+        }
+        .focus-layout #slot1 {
+            grid-column: 1;
+            grid-row: 1;
+        }
+        .focus-layout #slot2, .focus-layout #slot3, .focus-layout #slot4, .focus-layout #slot5 {
+            display: none !important;
+            visibility: hidden;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+        }
+        .main-content {
+            flex-grow: 1;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border-right: 2px solid #2d2d34;
+        }
+        .stream-slot {
+            background-color: #121214;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 2px solid #1f1f23;
+            cursor: grab;
+            position: relative;
+            user-select: none;
+            display: flex;
+            min-width: 400px;
+            min-height: 300px;
+
+  /* ADD THESE GPU ACCELERATION LINES TO PREVENT LAG: */
+            will-change: transform;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+        .stream-slot iframe {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .stream-slot.dragging {
+            opacity: 0.4;
+            border: 2px dashed #9146ff;
+        }
+        .chat-sidebar {
+            width: 340px;
+            background-color: #0e0e10;
+            display: none;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .chat-header {
+            padding: 15px;
+            background-color: #18181b;
+            border-bottom: 1px solid #2d2d34;
+        }
+        .chat-header h3 {
+            font-size: 0.95rem;
+        }
+        #activeChatName {
+            color: #9146ff;
+        }
+        .chat-container {
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+        }
+        .chat-placeholder {
+            padding: 40px 20px;
+            color: #53535f;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .settings-modal.open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background-color: #1f1f23;
+            border: 1px solid #3a3a42;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90vw;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #3a3a42;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #fff;
+            font-size: 1.3rem;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #adadb8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-close:hover {
+            color: #fff;
+        }
+        .modal-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .settings-option {
+            margin-bottom: 20px;
+        }
+        .settings-option label {
+            display: block;
+            margin-bottom: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .settings-option input[type="file"], .settings-option input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #2a2a30;
+            border: 1px solid #3a3a42;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        .settings-option input[type="file"]::file-selector-button {
+            background-color: #9146ff;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .settings-option input[type="file"]::file-selector-button:hover {
+            background-color: #7935cc;
+        }
+        .settings-option input[type="text"]:focus {
+            outline: none;
+            border-color: #9146ff;
+            box-shadow: 0 0 4px rgba(145, 70, 255, 0.3);
+        }
+        .apply-btn, .reset-btn {
+            background-color: #9146ff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            transition: background-color 0.2s;
+        }
+        .apply-btn:hover {
+            background-color: #7935cc;
+        }
+        .reset-btn {
+            background-color: #ef4444;
+            width: 100%;
+        }
+        .reset-btn:hover {
+            background-color: #dc2626;
+        }
+        .bg-preview {
+            margin-top: 20px;
+            width: 100%;
+            height: 150px;
+            background-color: #121214;
+            background-size: cover;
+            background-position: center;
+            border-radius: 4px;
+            border: 1px solid #3a3a42;
+        }
+        /* Fully collapses and hides stream slot outlines when no layout dataset is active */
+.grid-layout.empty-workspace .stream-slot {
+    display: none !important;
+    visibility: hidden;
+    border: none;
+}
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>⚔️ DMM Teams</h2>
+            </div>
+            <nav id="teamMenu" class="team-menu"></nav>
+                <!-- PLACE DIRECTLY BELOW YOUR </nav> TAG -->
+    
+    <!-- Custom Streamers Section Content Grid -->
+    <div style="padding: 15px; border-top: 2px solid #2d2d34; background-color: #18181b;">
+        <div id="customStreamersSection" class="favorites-section collapsed" style="margin-bottom: 12px;">
+            <div class="favorite-header" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
+                <h3 style="font-size: 0.95rem; margin: 0; color: #9146ff;">📺 Custom Streamers</h3>
+                <button class="favorite-collapse-btn" onclick="toggleCustomSection()" title="Collapse custom streams">▾</button>
+            </div>
+            <ul id="customStreamerList" class="favorite-list" style="list-style: none; padding-left: 0; max-height: 150px; overflow-y: auto;">
+                <li class="favorite-placeholder" style="font-size: 0.8rem; color: #53535f; padding: 4px 8px;">No custom streams loaded yet. Paste a link below.</li>
+            </ul>
+        </div>
+        
+<!-- Interactive Link Parser Input Frame -->
+<label style="display: block; font-size: 0.7rem; color: #adadb8; font-weight: bold; text-transform: uppercase; margin-bottom: 6px;"> 
+  ➕ Add Temporary Stream Link: 
+</label> 
+<input type="text" id="customStreamInput" placeholder="Paste Twitch or Kick URL..." onpaste="handleCustomStreamPaste(event)" style="width: 100%; padding: 8px; font-size: 0.85rem; background-color: #2a2a30; border: 1px solid #3a3a42; border-radius: 4px; color: #fff; box-sizing: border-box;"> 
+</div> 
+
+<!-- ========================================================================= -->
+<!-- TWIN-BUTTON SIDEBAR ACCOUNT GATE & ADMIN TOOLS -->
+<!-- ========================================================================= -->
+<div id="adminPanelWidget" style="padding: 15px; border-top: 2px solid #2d2d34; background-color: #18181b;">
+  <h3 id="adminPanelHeader" style="font-size: 0.85rem; color: #9146ff; text-transform: uppercase; margin-bottom: 10px; font-weight: bold; letter-spacing: 0.5px;">Account Gate</h3>
+  
+  <!-- Logged Out Dual Action Trigger Buttons Deck -->
+  <div id="loggedOutAdminForm" style="display: flex; gap: 8px;">
+    <button onclick="openAuthModal(false)" style="flex: 1; background-color: #2a2a30; color: #fff; border: 1px solid #3a3a42; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;">Log In</button>
+    <button onclick="openAuthModal(true)" style="flex: 1; background-color: #2a2a30; color: #fff; border: 1px solid #3a3a42; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;">Register</button>
+  </div>
+
+  <!-- Connected Admin Control Interface Panel Layer -->
+      <!-- Connected Admin Command View Layer -->
+      <div id="loggedInAdminForm" style="display: none; flex-direction: column; gap: 6px;">
+        <p style="font-size: 0.8rem; color: #adadb8; margin-bottom: 4px;">Logged in as: <span id="activeAdminEmail" style="color: #fff; font-weight: bold;"></span></p>
+        
+        <!-- VISUAL PANEL ATTACHMENT ACTION DECK WRAPPER -->
+        <div id="adminControlsContainer" style="display: none; margin-bottom: 6px;">
+          <button onclick="openDeployModal()" style="width: 100%; background-color: #22c55e; color: #fff; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.2s; margin-bottom: 8px;">
+            ➕ Deploy Streamer
+          </button>
+        </div>
+        
+        <button onclick="handleAdminLogout()" style="width: 100%; background-color: #ef4444; color: #fff; border: none; padding: 6px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">Sign Out</button>
+      </div>
+</div>
+</aside> 
+
+<!-- ========================================================================= -->
+<!-- DYNAMIC POPUP AUTHENTICATION WINDOW MODAL LAYER -->
+<!-- ========================================================================= -->
+<div id="authModal" class="settings-modal">
+  <div class="modal-content" style="width: 380px;">
+    <div class="modal-header">
+      <h2 id="authModalTitle">🔒 Sign In</h2>
+      <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <div class="settings-option" id="authUsernameGroup" style="display: none; margin-bottom: 12px;">
+        <label for="authUsernameInput">Username / Display Name:</label>
+        <input type="text" id="authUsernameInput" placeholder="Choose a username..." style="width: 100%; padding: 10px; background-color: #2a2a30; border: 1px solid #3a3a42; border-radius: 4px; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+      </div>
+      <div class="settings-option">
+        <label for="authEmailInput">Email Address:</label>
+        <input type="email" id="authEmailInput" placeholder="name@example.com" style="width: 100%; padding: 10px; background-color: #2a2a30; border: 1px solid #3a3a42; border-radius: 4px; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+      </div>
+      <div class="settings-option" style="margin-bottom: 15px;">
+        <label for="authPasswordInput">Password:</label>
+        <input type="password" id="authPasswordInput" placeholder="••••••••" style="width: 100%; padding: 10px; background-color: #2a2a30; border: 1px solid #3a3a42; border-radius: 4px; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+      </div>
+      
+      <button id="authPrimaryBtn" onclick="submitAuthForm()" style="width: 100%; color: #fff; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.9rem; margin-top: 10px; transition: background-color 0.2s;"></button>
+      
+      <div style="text-align: center; margin-top: 15px; border-top: 1px solid #3a3a42; padding-top: 15px;">
+        <p id="authSwitchText" style="font-size: 0.8rem; color: #adadb8;"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- BRAND NEW: STREAMER ROSTER DEPLOYMENT POPUP MODAL -->
+<!-- ========================================================================= -->
+<div id="deployModal" class="settings-modal">
+  <div class="modal-content" style="width: 400px;">
+    <div class="modal-header">
+      <h2>🚀 Deploy Live Streamer</h2>
+      <button class="modal-close" onclick="closeDeployModal()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <div class="settings-option">
+        <label for="deployTeamName">Tournament Team Name:</label>
+        <input type="text" id="deployTeamName" placeholder="e.g., Team Alpha" style="width: 100%; padding: 10px; background-color: #2a2a30; border: 1px solid #3a3a42; border-radius: 4px; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+      </div>
+      <div class="settings-option">
+        <label for="deployStreamerName">Streamer Visual Name:</label>
+        <input type="text" id="deployStreamerName" placeholder="e.g., Shroud" style="width: 100%; padding: 10px; background-color: #2a2a30; border: 1px solid #3a3a42; border-radius: 4px; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+      </div>
+      <div class="settings-option" style="margin-bottom: 15px;">
+        <label for="deployStreamerUrl">Twitch or Kick URL / Handle:</label>
+        <input type="text" id="deployStreamerUrl" placeholder="https://twitch.tv" style="width: 100%; padding: 10px; background-color: #2a2a30; border: 1px solid #3a3a42; border-radius: 4px; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+      </div>
+      <button onclick="executeStreamerDeployment()" style="width: 100%; background-color: #22c55e; color: #fff; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.9rem; margin-top: 10px; transition: background-color 0.2s;">
+        Save and Sync Globally
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- CORE APP VIEWPORT MAIN LAYOUT HEADER -->
+<!-- ========================================================================= -->
+<div class="main-content"> 
+<header style="background-color: #18181b; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d2d34;"> 
+  <h1 id="currentViewTitle" style="font-size: 1.1rem; margin: 0;">Select a Team from the Sidebar to Begin</h1> 
+  <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;"> 
+    <button class="layout-toggle-btn" onclick="toggleLayout()" style="padding: 8px 12px; background-color: #000; color: #fff; border: 1px solid #53535f; border-radius: 4px; cursor: pointer; white-space: nowrap;">🔄 Toggle Grid/Focus Layout</button> 
+    <button class="layout-toggle-btn" onclick="openBackgroundSettings()" style="padding: 8px 12px; background-color: #000; color: #fff; border: 1px solid #53535f; border-radius: 4px; cursor: pointer; white-space: nowrap;">⚙️ Background Settings</button> 
+  </div> 
+</header>
+            
+            <main id="videoWorkspace" class="grid-layout">
+                <video id="bgVideo" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none; visibility: hidden;" autoplay muted loop playsinline></video>
+                <div id="slot1" class="stream-slot" draggable="true" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)"></div>
+                <div id="slot2" class="stream-slot" draggable="true" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)"></div>
+                <div id="slot3" class="stream-slot" draggable="true" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)"></div>
+                <div id="slot4" class="stream-slot" draggable="true" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)"></div>
+                <div id="slot5" class="stream-slot" draggable="true" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)"></div>
+            </main>
+        </div>
+        
+        <aside class="chat-sidebar">
+            <div class="chat-header">
+                <h3>💬 Live Chat: <span id="activeChatName">None</span></h3>
+            </div>
+            <div id="chatContainer" class="chat-container">
+                <div class="chat-placeholder">Select a player focus view to load their live chat feed.</div>
+            </div>
+        </aside>
+    </div>
+<!-- Main Settings Popup Modal Wrapper Frame -->
+<!-- Core Background Options Window Framework -->
+<div id="backgroundModal" class="settings-modal">
+  <div class="modal-content">
+    
+    <div class="modal-header">
+      <h2>⚙️ Background Settings</h2>
+      <button class="modal-close" onclick="closeBackgroundSettings()">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      
+      <!-- Upload Section Block Component -->
+      <div class="settings-option">
+        <label for="bgUpload">Upload Background Image or Video:</label>
+        <input type="file" id="bgUpload" accept="image/*,video/*" onchange="handleBackgroundUpload(event)">
+        <p style="font-size: 0.85rem; color: #adadb8; margin-top: 5px;">Supported: JPG, PNG, GIF, WebP, MP4, WebM. Videos loop automatically.</p>
+      </div>
+      
+      <!-- External Links Input Field Framework -->
+      <div class="settings-option">
+        <label for="bgUrl">Or enter image/video URL:</label>
+        <input type="text" id="bgUrl" placeholder="https://example.com" onkeyup="handleBackgroundUrlChange(event)">
+        <button class="apply-btn" onclick="applyBackgroundFromUrl()" style="margin-top: 8px;">Apply URL</button>
+      </div>
+
+      <!-- COLLAPSIBLE RECENT HISTORY TRAY COMPONENT -->
+      <div class="settings-option" style="margin-top: 25px; border-top: 1px solid #3a3a42; padding-top: 15px;">
+        <details id="bgHistoryAccordion" style="width: 100%; display: block !important; visibility: visible !important;">
+          <summary style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; color: #fff; font-size: 0.95rem; font-weight: 500; list-style: none !important; outline: none;">
+            <span style="display: flex; align-items: center; gap: 6px;">
+              <span class="accordion-arrow" style="display: inline-block; transition: transform 0.2s ease; font-size: 0.75rem;">▶</span>
+              ⏱️ Recent Background History
+            </span>
+            <button class="reset-btn" onclick="event.preventDefault(); event.stopPropagation(); clearBackgroundHistory();" style="background-color: #ef4444; width: auto; padding: 4px 12px; font-size: 0.8rem; margin: 0; font-weight: bold; border-radius: 4px;">Clear Recent</button>
+          </summary>
+          
+            <!-- Direct injection wrapper element targeted by javascript grid maps -->
+            <!-- Injected thin-scrollbar grid configuration target -->
+<!-- FIXED: Lowered max-height to 185px to trigger scroll on item 7, and insulated track layout -->
+            <div id="recentBgContainer" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; min-height: 70px; margin-top: 15px; max-height: 185px; overflow-y: scroll; padding-right: 6px; box-sizing: border-box;">
+            <!-- Rendered via frontend script code loops -->
+          </div>
+        </details>
+      </div>
+
+      <!-- Default Layout Wipe Action Module -->
+      <div class="settings-option" style="margin-top: 15px;">
+        <button class="reset-btn" onclick="resetBackground()" style="width: 100%; background-color: #ef4444;">Reset to Default</button>
+      </div>
+
+      <!-- Live Asset Thumbnail Generation Box -->
+      <div class="bg-preview" id="bgPreview" style="margin-top: 20px; width: 100%; height: 120px; background-color: #121214; background-size: cover; background-position: center; border-radius: 4px; border: 1px solid #3a3a42;"></div>
+
+    </div> <!-- Safely closes .modal-body -->
+  </div> <!-- Safely closes .modal-content -->
+</div> <!-- Safely closes #backgroundModal -->
+
+<!-- Structural Accordion UI Layout Overrides -->
+<style>
+  #bgHistoryAccordion::-webkit-details-marker,
+  #bgHistoryAccordion summary::marker {
+    display: none !important;
+  }
+  #bgHistoryAccordion[open] .accordion-arrow {
+    transform: rotate(90deg);
+  }
+</style>
+
+
+<div class="bg-preview" id="bgPreview"></div>
+</div> 
+</div> 
+</div>
+
+    </div>
+
+    <script>
+// =========================================================================
+// GLOBAL DATABASE CONFIGURATION & HANDSHAKE ENGINE
+// =========================================================================
+const MY_SUPABASE_URL = "https://axzeizuraxnkologrdtn.supabase.co"; 
+const MY_SUPABASE_ANON_KEY = "sb_publishable_pcuK1app3_lczGMnPPAM1A_JuLFJPtz"; 
+
+// FIXED: Use the global window.supabase bundle explicitly to create the clean client
+let dbClient = null;
+
+if (window.supabase && typeof window.supabase.createClient === 'function') {
+    dbClient = window.supabase.createClient(MY_SUPABASE_URL, MY_SUPABASE_ANON_KEY);
+    console.log("✅ Supabase successfully connected!");
+} else {
+    console.error("❌ Critical: Supabase library failed to bind from the CDN.");
+}
+
+// Global Storage Tracking Keys
+const FAVORITE_TEAM_KEY = 'favoriteTeamId';
+const FAVORITE_STREAMERS_KEY = 'favoriteStreamers';
+
+        let globalTeamsData = [];
+        let currentActiveTeamKey = null;
+        let favoriteTeamId = null;
+        let favoriteStreamerKeys = [];
+        let collapsedTeamIds = new Set();
+        let favoriteSectionCollapsed = true;
+        let dragSourceId = null;
+
+// =========================================================================
+// WORKSPACE VISIBILITY CONTROLLER & CORE INITIALIZATION
+// =========================================================================
+
+// Structural helper that toggles layout visibility states cleanly
+function updateWorkspaceVisibilityState(isEmpty) {
+    const workspace = document.getElementById('videoWorkspace');
+    if (!workspace) return;
+    
+    if (isEmpty) {
+        workspace.classList.add('empty-workspace');
+    } else {
+        workspace.classList.remove('empty-workspace');
+    }
+}
+
+document.addEventListener("DOMContentLoaded", async () => { 
+  if (window.location.protocol === 'file:') { 
+    console.warn('Twitch embeds require a web server or a matching parent host. Run this page via http://localhost or a supported host.'); 
+  } 
+  
+  favoriteTeamId = localStorage.getItem(FAVORITE_TEAM_KEY); 
+  favoriteStreamerKeys = JSON.parse(localStorage.getItem(FAVORITE_STREAMERS_KEY) || '[]'); 
+  
+  const backgroundModal = document.getElementById('backgroundModal'); 
+  if (backgroundModal) { 
+    backgroundModal.addEventListener('click', function(event) { 
+      if (event.target === backgroundModal) { 
+        closeBackgroundSettings(); 
+      } 
+    }); 
+  } 
+  
+  try { 
+    // STEP 1: Fetch live cloud roster details from your Supabase database table 
+    const { data: cloudTeams, error } = await dbClient 
+      .from('teams_data') 
+      .select('*'); 
+      
+    if (error) { 
+      console.error("Cloud synchronization database error:", error); 
+      return; 
+    } 
+    
+    // STEP 2: Map the database table rows directly into your frontend memory array 
+    // STEP 2: Map the database table rows directly into your frontend memory array 
+    globalTeamsData = cloudTeams.map(team => ({ 
+      id: team.id, 
+      name: team.name, 
+      members: team.members || [], 
+      isCustomCreated: team.is_custom_created 
+    })); 
+    
+    // STEP 3: Build the sidebar menu layout dynamically with the live data 
+    buildSidebarMenu(globalTeamsData); 
+
+    // Loads your custom persistent background skins
+    await loadBackground();
+    await renderBackgroundHistoryUI();
+
+    // =========================================================================
+    // INJECTED HERE: STARTS YOUR AUTOMATED HANDS-FREE TIMELINE SYNC ENGINE
+    // =========================================================================
+    activateAutomatedSyncEngine();
+    // =========================================================================
+    
+    // Evaluates user state flags on boot to hide or show gray boxes instantly 
+    if (favoriteTeamId) { 
+      const favoriteTeam = globalTeamsData.find(t => t.id === favoriteTeamId); 
+      if (favoriteTeam) { 
+        loadTeam(favoriteTeamId); 
+        return; 
+      } 
+    } 
+    
+    if (favoriteStreamerKeys.length > 0) { 
+      loadFavoriteStreamers(); 
+      return; 
+    } 
+    
+    // If execution lands here, no parameters matched. Strip slot visibilities safely. 
+    if (typeof updateWorkspaceVisibilityState === 'function') { 
+      updateWorkspaceVisibilityState(true); 
+    } 
+    
+  } catch (err) { 
+    console.error("Critical error mapping live server database roster:", err); 
+  } 
+});
+
+
+        document.addEventListener('visibilitychange', function() {
+            const bgVideo = document.getElementById('bgVideo');
+            if (bgVideo) {
+                if (document.hidden) {
+                    bgVideo.pause();
+                } else {
+                    bgVideo.play().catch(err => {
+                        console.log('Background video autoplay blocked:', err);
+                    });
+                }
+            }
+        });
+
+        function buildSidebarMenu(teams) {
+            const menuContainer = document.getElementById('teamMenu');
+            menuContainer.innerHTML = "";
+            const favoriteItems = [];
+
+            // FIXED: Removed duplicate copy-paste loop block that was multiplying stream allocations by 2x
+            teams.forEach(team => {
+                team.members.forEach((member, idx) => {
+                    if (isFavoriteStreamer(team.id, idx)) {
+                        favoriteItems.push({ team, member, idx });
+                    }
+                });
+            });
+
+            const favoriteSection = document.createElement('div');
+            favoriteSection.className = 'favorites-section' + (favoriteSectionCollapsed ? ' collapsed' : '');
+            favoriteSection.innerHTML = '<div class="favorite-header"><h3>★ Favorite Streamers (' + favoriteItems.length + ')</h3><button class="favorite-collapse-btn" onclick="toggleFavoriteSection()" title="Collapse favorites">▾</button></div><ul id="favoriteList" class="favorite-list"></ul>';
+            menuContainer.appendChild(favoriteSection);
+
+            const favoriteList = favoriteSection.querySelector('#favoriteList');
+            if (favoriteItems.length === 0) {
+                favoriteList.innerHTML = '<li class="favorite-placeholder">No favorite streamers yet. Star a streamer from any team below.</li>';
+            } else {
+                favoriteList.innerHTML = favoriteItems.map(item => {
+                    const platformLabel = item.member.platform === 'twitch' ? '🟣 Twitch' : '🟢 Kick';
+                    return '<li><button class="member-btn" onclick="focusPlayer(\'' + item.team.id + '\', ' + item.idx + ')">📺 ' + item.member.name + ' (' + platformLabel + ')</button><button class="favorite-star active" onclick="event.stopPropagation(); toggleFavoriteStreamer(\'' + item.team.id + '\', ' + item.idx + ')">★</button></li>';
+                }).join('');
+            }
+
+            teams.forEach(team => {
+                const isCollapsed = collapsedTeamIds.has(team.id) || (currentActiveTeamKey !== team.id);
+                const teamGroup = document.createElement('div');
+                teamGroup.id = 'team-group-' + team.id;
+                teamGroup.className = 'team-group' + (isCollapsed ? ' collapsed' : '');
+                
+                let memberItems = '';
+                team.members.forEach((member, idx) => {
+                    const platformLabel = member.platform === 'twitch' ? '🟣 Twitch' : '🟢 Kick';
+                    const activeClass = isFavoriteStreamer(team.id, idx) ? ' favorite-star active' : ' favorite-star';
+                    const starChar = isFavoriteStreamer(team.id, idx) ? '★' : '☆';
+                    memberItems += '<li><button class="member-btn" onclick="focusPlayer(\'' + team.id + '\', ' + idx + ')">📺 ' + member.name + ' (' + platformLabel + ')</button><button class="' + activeClass + '" onclick="event.stopPropagation(); toggleFavoriteStreamer(\'' + team.id + '\', ' + idx + ')">' + starChar + '</button></li>';
+                });
+
+                const isFavorite = team.id === favoriteTeamId;
+                const starText = isFavorite ? '★' : '☆';
+                const favoriteClass = 'team-banner-star' + (isFavorite ? ' active' : '');
+                teamGroup.innerHTML = '<div class="team-header"><button class="team-btn" onclick="loadTeam(\'' + team.id + '\')">🏆 ' + team.name + '</button><div class="team-actions"><span class="' + favoriteClass + '" onclick="event.stopPropagation(); toggleFavoriteTeam(\'' + team.id + '\')" title="Toggle favorite team">' + starText + '</span><button class="team-collapse-btn" onclick="event.stopPropagation(); toggleTeamCollapse(\'' + team.id + '\')" title="Collapse team">▾</button></div></div><ul class="member-list">' + memberItems + '</ul>';
+                menuContainer.appendChild(teamGroup);
+            });
+        }
+
+        function loadTeam(teamId) {
+            currentActiveTeamKey = teamId;
+            const team = globalTeamsData.find(t => t.id === teamId);
+            document.getElementById('currentViewTitle').innerText = '🏆 Viewing: ' + team.name;
+            const workspace = document.getElementById('videoWorkspace');
+            workspace.classList.remove('focus-layout');
+            workspace.classList.add('grid-layout');
+            renderStreams(team.members);
+            hideChatSidebar();
+            buildSidebarMenu(globalTeamsData);
+        }
+
+        function loadFavoriteStreamers() {
+            const favoriteStreams = [];
+            globalTeamsData.forEach(team => {
+                team.members.forEach((member, idx) => {
+                    if (isFavoriteStreamer(team.id, idx)) {
+                        favoriteStreams.push(member);
+                    }
+                });
+            });
+            if (favoriteStreams.length === 0) {
+                clearAllSlots();
+                document.getElementById('currentViewTitle').innerText = '★ Favorite Streamers';
+                return;
+            }
+            currentActiveTeamKey = null;
+            document.getElementById('currentViewTitle').innerText = '★ Favorite Streamers';
+            const workspace = document.getElementById('videoWorkspace');
+            workspace.classList.remove('focus-layout');
+            workspace.classList.add('grid-layout');
+            renderStreams(favoriteStreams);
+            hideChatSidebar();
+        }
+        function toggleFavoriteTeam(teamId) {
+            if (favoriteTeamId === teamId) {
+                favoriteTeamId = null;
+                localStorage.removeItem(FAVORITE_TEAM_KEY);
+                buildSidebarMenu(globalTeamsData);
+                if (favoriteStreamerKeys.length > 0) {
+                    loadFavoriteStreamers();
+                } else {
+                    clearAllSlots();
+                    document.getElementById('currentViewTitle').innerText = 'Select a Team from the Sidebar to Begin';
+                }
+                return;
+            }
+            favoriteTeamId = teamId;
+            localStorage.setItem(FAVORITE_TEAM_KEY, teamId);
+            buildSidebarMenu(globalTeamsData);
+            loadTeam(teamId);
+        }
+
+        function getStreamerKey(teamId, idx) { return teamId + ':' + idx; }
+        function isFavoriteStreamer(teamId, idx) { return favoriteStreamerKeys.includes(getStreamerKey(teamId, idx)); }
+
+        function toggleFavoriteStreamer(teamId, idx) {
+            const key = getStreamerKey(teamId, idx);
+            if (isFavoriteStreamer(teamId, idx)) {
+                favoriteStreamerKeys = favoriteStreamerKeys.filter(value => value !== key);
+            } else {
+                updateWorkspaceVisibilityState(true);
+                favoriteStreamerKeys.push(key);
+            }
+            localStorage.setItem(FAVORITE_STREAMERS_KEY, JSON.stringify(favoriteStreamerKeys));
+            buildSidebarMenu(globalTeamsData);
+            if (currentActiveTeamKey === null) {
+                loadFavoriteStreamers();
+            }
+        }
+
+        function toggleTeamCollapse(teamId) {
+            const teamGroup = document.getElementById('team-group-' + teamId);
+            if (!teamGroup) return;
+            const isCollapsed = teamGroup.classList.toggle('collapsed');
+            if (isCollapsed) {
+                collapsedTeamIds.add(teamId);
+            } else {
+                collapsedTeamIds.delete(teamId);
+            }
+        }
+
+        function toggleFavoriteSection() {
+            favoriteSectionCollapsed = !favoriteSectionCollapsed;
+            buildSidebarMenu(globalTeamsData);
+        }
+
+function focusPlayer(teamId, targetIndex) {
+    // FIXED: Save the teamId instead of wiping it out so toggle layout can reference it later!
+    currentActiveTeamKey = teamId; 
+    
+    const team = globalTeamsData.find(t => t.id === teamId);
+    if (!team) return;
+    
+    const focusedPlayer = team.members[targetIndex];
+    if (!focusedPlayer) return;
+
+    document.getElementById('currentViewTitle').innerText = '🏆 Viewing: ' + team.name + ' (' + focusedPlayer.name + ' Focus)';
+    
+    const workspace = document.getElementById('videoWorkspace');
+    workspace.classList.remove('grid-layout');
+    workspace.classList.add('focus-layout');
+    
+    renderStreams([focusedPlayer]);
+    loadChatFeed(focusedPlayer);
+}
+
+        // FIXED: Rebuilt completely to utilize the official interactive JS player SDK objects securely
+// Add this single variable right ABOVE your function block to track retries safely
+let sdkRetryCount = 0;
+
+function renderStreams(memberArray) {
+    updateWorkspaceVisibilityState(memberArray.length === 0 || memberArray.every(m => !m));
+    // Step 1: Force clear layout nodes without complex datasets
+    for (let i = 1; i <= 5; i++) {
+        const slot = document.getElementById('slot' + i);
+        if (slot) {
+            slot.innerHTML = "";
+            slot.dataset.streamer = memberArray[i - 1] ? JSON.stringify(memberArray[i - 1]) : "undefined";
+        }
+    }
+
+    const currentHost = window.location.hostname || '127.0.0.1';
+    const parentHosts = [currentHost];
+    if (!parentHosts.includes('127.0.0.1')) parentHosts.push('127.0.0.1');
+    if (!parentHosts.includes('localhost')) parentHosts.push('localhost');
+
+    memberArray.forEach((streamer, index) => {
+        if (!streamer) return;
+        const targetSlotId = 'slot' + (index + 1);
+        const containerDiv = document.getElementById(targetSlotId);
+        if (!containerDiv) return;
+
+        if (streamer.platform === "twitch") {
+            // SAFE SWITCH: If Twitch isn't ready on page generation, create a standard iframe fallback.
+            // This completely stops JavaScript timing bugs, lag, or dependency errors from breaking the page.
+            if (typeof Twitch === "undefined" || !Twitch.Player) {
+                const twitchFrame = document.createElement('iframe');
+                // Build a pristine query string target securely using your clean parent parameters
+                twitchFrame.src = 'https://player.twitch.tv/?channel=' + encodeURIComponent(streamer.user) + 
+                                  '&parent=' + encodeURIComponent(currentHost) + 
+                                  '&parent=127.0.0.1&parent=localhost&autoplay=true&muted=' + (index !== 0 ? 'true' : 'false');
+                twitchFrame.frameBorder = "0";
+                twitchFrame.scrolling = "no";
+                twitchFrame.allow = "autoplay; fullscreen";
+                twitchFrame.allowFullscreen = true;
+                twitchFrame.style.width = "100%";
+                twitchFrame.style.height = "100%";
+                twitchFrame.style.border = "none";
+                containerDiv.appendChild(twitchFrame);
+                return;
+            }
+
+            // Fallback to Interactive SDK Object initialization when memory profile matches instantly
+            const player = new Twitch.Player(targetSlotId, {
+                channel: streamer.user.trim().toLowerCase(),
+                width: "100%",
+                height: "100%",
+                parent: parentHosts,
+                autoplay: true,
+                muted: index !== 0
+            });
+
+            player.addEventListener(Twitch.Player.READY, () => {
+                // ADD THIS LINE: Tells Twitch's video player to use its minimum buffer size
+                player.setLowLatency(true); 
+                
+                // Downscale background streams to save hardware processing power and bandwidth
+                player.setQuality(index === 0 ? "1080p60" : "360p30");
+            });
+
+
+        } else if (streamer.platform === "kick") {
+            const muteParam = index !== 0 ? "true" : "false";
+            const kickFrame = document.createElement('iframe');
+            
+            // FIXED: Added the mandatory forward slash after player.kick.com so URLs resolve perfectly
+            kickFrame.src = 'https://player.kick.com/' + encodeURIComponent(streamer.user) + '?autoplay=true&muted=' + muteParam;
+            
+            kickFrame.frameBorder = "0";
+            kickFrame.scrolling = "no";
+            
+            // Added official browser feature permissions required for Kick HTML5 player stability
+            kickFrame.allow = "autoplay; fullscreen; picture-in-picture; encrypted-media";
+            kickFrame.allowFullscreen = true;
+            
+            kickFrame.style.width = "100%";
+            kickFrame.style.height = "100%";
+            kickFrame.style.border = "none";
+            kickFrame.style.pointerEvents = "auto";
+            
+            containerDiv.appendChild(kickFrame);
+        }
+    });
+}
+
+
+        // FIXED: Resolved multi-parent parameter bug to ensure secure origin handshakes
+function loadChatFeed(streamer) {
+    if (!streamer || !streamer.platform || !streamer.user) return;
+    showChatSidebar();
+    
+    const chatContainer = document.getElementById('chatContainer');
+    const chatTitle = document.getElementById('activeChatName');
+    
+    chatTitle.innerText = streamer.name + ' (' + streamer.platform.toUpperCase() + ')';
+    chatContainer.innerHTML = "";
+
+    const chatFrame = document.createElement('iframe');
+    chatFrame.height = "100%";
+    chatFrame.width = "100%";
+    chatFrame.frameBorder = "0";
+    chatFrame.scrolling = "yes"; // Allows chats to scroll properly
+    chatFrame.allow = "autoplay; fullscreen";
+    chatFrame.allowFullscreen = true;
+
+    // Get your exact live address bar host (forces "127.0.0.1" instead of breaking)
+    const currentHost = window.location.hostname || '127.0.0.1';
+
+    if (streamer.platform === "twitch") {
+        // FIX 1: Twitch chat strictly requires usernames to be lowercase to render
+        const twitchUser = encodeURIComponent(streamer.user.trim().toLowerCase());
+        
+        // FIX 2: Explicitly grab the host to maintain a matching secure handshake
+        const currentHost = window.location.hostname || '127.0.0.1';
+        const encodedHost = encodeURIComponent(currentHost);
+        
+        chatFrame.src = 'https://www.twitch.tv/embed/' + twitchUser + '/chat?parent=' + encodedHost + '&darkpopout=true';
+
+                        
+    } else if (streamer.platform === "kick") {
+        // Core Isolated Logic Branch for Kick Chat (Bypasses framing locks)
+        const kickUser = streamer.user.trim().toLowerCase();
+        
+        chatFrame.src = 'https://kick.com/popout/' + kickUser + '/chat';
+    }
+    
+    chatContainer.appendChild(chatFrame);
+}
+
+
+        function clearChatFeed() {
+            const chatContainer = document.getElementById('chatContainer');
+            const chatTitle = document.getElementById('activeChatName');
+            chatTitle.innerText = 'None';
+            chatContainer.innerHTML = '<div class="chat-placeholder">Select a player focus view to load their live chat feed.</div>';
+        }
+
+        function hideChatSidebar() {
+            const chatSidebar = document.querySelector('.chat-sidebar');
+            if (!chatSidebar) return;
+            chatSidebar.style.display = 'none';
+            clearChatFeed();
+        }
+
+        function showChatSidebar() {
+            const chatSidebar = document.querySelector('.chat-sidebar');
+            if (!chatSidebar) return;
+            chatSidebar.style.display = 'flex';
+        }
+
+        function clearAllSlots() {
+            for (let i = 1; i <= 5; i++) {
+                const slot = document.getElementById('slot' + i);
+                if (slot) {
+                    slot.innerHTML = '';
+                    slot.dataset.streamer = 'undefined';
+                    slot.style.display = 'block';
+                }
+            }
+        }
+
+        function handleDragStart(e) {
+            dragSourceId = e.currentTarget.id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragSourceId);
+            e.currentTarget.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            return false;
+        }
+
+        // FIXED: Swaps dataset configurations cleanly and forces clean SDK initialization loops
+        function handleDrop(e) {
+            if (e.stopPropagation) { e.stopPropagation(); }
+            e.preventDefault();
+
+            const targetSlot = e.currentTarget;
+            const sourceSlot = document.getElementById(dragSourceId);
+
+            if (dragSourceId && sourceSlot && dragSourceId !== targetSlot.id) {
+                const tempDataset = sourceSlot.dataset.streamer;
+                sourceSlot.dataset.streamer = targetSlot.dataset.streamer;
+                targetSlot.dataset.streamer = tempDataset;
+
+                const updatedMembers = [];
+                for (let i = 1; i <= 5; i++) {
+                    const currentSlot = document.getElementById('slot' + i);
+                    if (currentSlot && currentSlot.dataset.streamer && currentSlot.dataset.streamer !== "undefined") {
+                        updatedMembers.push(JSON.parse(currentSlot.dataset.streamer));
+                    } else {
+                        updatedMembers.push(null);
+                    }
+                }
+
+                renderStreams(updatedMembers);
+
+                if (targetSlot.id === 'slot1' && targetSlot.dataset.streamer !== "undefined") {
+                    loadChatFeed(JSON.parse(targetSlot.dataset.streamer));
+            } else if (sourceSlot.id === 'slot1' && sourceSlot.dataset.streamer !== "undefined") {
+                loadChatFeed(JSON.parse(sourceSlot.dataset.streamer));
+            }
+        }
+        document.querySelectorAll('.stream-slot').forEach(s => s.classList.remove('dragging'));
+    }
+
+function toggleLayout() {
+    const workspace = document.getElementById('videoWorkspace');
+    if (!workspace) return;
+
+    // Check if we are currently in focus layout BEFORE we change it
+    const wasInFocusMode = workspace.classList.contains('focus-layout');
+
+    workspace.classList.toggle('grid-layout');
+    workspace.classList.toggle('focus-layout');
+
+    // If we were in focus mode, we are now moving BACK to grid mode
+    if (wasInFocusMode) {
+        hideChatSidebar();
+        
+        // If we know what team this focused player belonged to, reload the whole team grid!
+        if (currentActiveTeamKey) {
+            const currentTeam = globalTeamsData.find(t => t.id === currentActiveTeamKey);
+            if (currentTeam) {
+                document.getElementById('currentViewTitle').innerText = '🏆 Viewing: ' + currentTeam.name;
+                renderStreams(currentTeam.members);
+                buildSidebarMenu(globalTeamsData); // Refreshes active sidebar highlights
+            }
+        }
+    } else {
+        // If moving FROM grid mode TO focus mode, pull slot 1's player into focus
+        const slot1 = document.getElementById('slot1');
+        if (slot1 && slot1.dataset.streamer && slot1.dataset.streamer !== "undefined") {
+            const streamerObj = JSON.parse(slot1.dataset.streamer);
+            document.getElementById('currentViewTitle').innerText = '🏆 Viewing Focus Mode';
+            renderStreams([streamerObj]);
+            loadChatFeed(streamerObj);
+        }
+    }
+}
+
+// PASTED EXACTLY HERE
+// REBUILT: Sync engine that directly reads your new "Kick Offset" slider value
+// RESTORED: Original layout flush mechanism that forces active stream frames to re-buffer simultaneously
+// =========================================================================
+// UNIFIED HANDS-FREE AUTOMATED LATENCY SYNC ENGINE
+// =========================================================================
+let autoSyncIntervalTracker = null;
+
+function syncAllLiveFeeds() {
+    const workspace = document.getElementById('videoWorkspace');
+    if (!workspace) return;
+    
+    console.log("⚡ Auto-Sync Cycle: Measuring layout timelines and correcting drift...");
+    const activeFrames = workspace.querySelectorAll('iframe');
+    
+    activeFrames.forEach(frame => {
+        try {
+            const currentUrl = frame.src || "";
+            
+            // 🟣 BRANCH 1: TWITCH EMBED HANDLER (Stays precision seamless via timeline seeks)
+            if (currentUrl.includes("twitch.tv")) {
+                const slotParent = frame.closest('.video-slot');
+                if (slotParent) {
+                    const slotId = slotParent.id.replace('slot', ''); // Extracts number 1-5
+                    if (window.twitchPlayers && window.twitchPlayers[slotId]) {
+                        const playerInstance = window.twitchPlayers[slotId];
+                        
+                        if (typeof playerInstance.getCurrentTime === 'function' && typeof playerInstance.seek === 'function') {
+                            const latency = playerInstance.getLiveDuration() - playerInstance.getCurrentTime();
+                            
+                            // Only slide the seek head if drift exceeds 2.5 seconds
+                            if (latency > 2.5) {
+                                playerInstance.seek(playerInstance.getLiveDuration() - 0.5);
+                                console.log(`⏩ Fast-forwarded Twitch Slot ${slotId} to catch up with the live edge.`);
+                            }
+                        }
+                    }
+                }
+            } 
+            // 🟢 BRANCH 2: OPTIMIZED KICK EMBED HANDLER
+            // FIXED: Removed the hard aggressive minute-by-minute frame blanking reset!
+            else if (currentUrl.includes("kick.com")) {
+                // We add custom tracking data to check how long the stream has been sitting un-refreshed
+                if (!frame.dataset.lastSyncTime) {
+                    frame.dataset.lastSyncTime = Date.now();
+                }
+
+                const elapsedSinceLastHardSync = Date.now() - parseInt(frame.dataset.lastSyncTime);
+
+                // PERFORMANCE THRESHOLD: Only execute a hard buffer reset if the stream has been 
+                // running for more than 5 minutes straight (200000ms), preventing constant annoying 60-second loops.
+                if (elapsedSinceLastHardSync > 200000) {
+                    // Perform a seamless source rewrite WITHOUT setting it to blank ('') first.
+                    // This lets the browser reuse cache and prevents the harsh layout blinking effect!
+                    frame.src = currentUrl; 
+                    frame.dataset.lastSyncTime = Date.now();
+                    console.log("🔄 Optimally re-buffered a long-running Kick stream layout node smoothly.");
+                }
+            }
+        } catch (err) {
+            console.warn("Auto-sync block skipped an iframe window frame target:", err.message);
+        }
+    });
+}
+
+// ⏳ AUTOMATED ENGINE ENHANCER: Spins up the background timer loops
+function activateAutomatedSyncEngine() {
+    if (autoSyncIntervalTracker) clearInterval(autoSyncIntervalTracker);
+
+    // Initial warm-up execution block runs 5 seconds after page loads
+    setTimeout(() => { syncAllLiveFeeds(); }, 5000);
+
+    // Run the sync engine completely hands-free every 60 seconds
+    autoSyncIntervalTracker = setInterval(() => {
+        syncAllLiveFeeds();
+    }, 60000); 
+    
+    console.log("🚀 Automated background video delay tracking active [60s intervals].");
+}
+
+// =========================================================================
+// RESTORED: ORIGINAL SINGLE-ASSET BACKGROUND INFRASTRUCTURE
+// =========================================================================
+
+// =========================================================================
+// FIXED: MULTI-ASSET BACKGROUND INFRASTRUCTURE WITH HISTORY QUEUE
+// =========================================================================
+
+function isVideoFile(filename) { 
+  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv']; 
+  return videoExtensions.some(ext => filename.toLowerCase().endsWith(ext)); 
+} 
+
+function getHistoryMetadata() { 
+  return JSON.parse(localStorage.getItem('customBackgroundHistory') || '[]'); 
+} 
+
+// =========================================================================
+// OPTIMIZED BACKGROUND HISTORY LOGIC (LAG PROTECTION DECK)
+// =========================================================================
+async function addBackgroundToHistory(sourceValue, isVideo, rawFile = null) { 
+  let history = getHistoryMetadata(); 
+  const uniqueId = rawFile ? 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9) : sourceValue; 
+  
+  // Deduplicate past selections 
+  history = history.filter(item => item.value !== sourceValue); 
+  
+  if (rawFile && typeof saveFileToDB === 'function') { 
+    await saveFileToDB(uniqueId, rawFile); 
+  } 
+  
+  const determinedName = rawFile ? rawFile.name : (sourceValue.length > 25 ? sourceValue.substring(0, 22) + '...' : sourceValue); 
+  
+  history.unshift({ 
+    id: uniqueId, 
+    value: sourceValue, 
+    isVideo: isVideo, 
+    isStoredFile: rawFile !== null, 
+    fileName: determinedName 
+  }); 
+  
+  // FIXED: Increased ceiling check capacity from 6 to 15 entries! 
+  if (history.length > 15) { 
+    const removedItem = history.pop(); 
+    if (removedItem.isStoredFile && typeof getDB === 'function') { 
+      try { 
+        const db = await getDB(); 
+        const tx = db.transaction("backgrounds", "readwrite"); 
+        tx.objectStore("backgrounds").delete(removedItem.id); 
+      } catch(e) { console.error(e); } 
+    } 
+  } 
+  
+  localStorage.setItem('customBackgroundHistory', JSON.stringify(history)); 
+  await renderBackgroundHistoryUI(); 
+} 
+
+// =========================================================================
+// INJECTED HERE: RE-ADDED THE CLICK SELECTION HANDLER ROUTINE
+// =========================================================================
+async function selectHistoryItem(index) { 
+  let history = getHistoryMetadata(); 
+  const selected = history[index]; 
+  if (!selected) return; 
+  
+  let targetSource = selected.value; 
+  
+  // 1. DATABASE RECOVERY: Rebuild the temporary session blob pointer if it's a local file
+  if (selected.isStoredFile) {
+    if (typeof loadFileFromDB === 'function') {
+      const cachedFile = await loadFileFromDB(selected.id); 
+      if (cachedFile) { 
+        targetSource = URL.createObjectURL(cachedFile); 
+      } else { 
+        alert("File payload missing from storage."); 
+        return; 
+      }
+    } else {
+      const loadFunc = typeof getFileFromDB === 'function' ? getFileFromDB : null;
+      if (loadFunc) {
+        const fileRecord = await loadFunc(selected.id);
+        if (fileRecord) {
+          const finalBlob = fileRecord.file ? fileRecord.file : fileRecord;
+          targetSource = URL.createObjectURL(finalBlob);
+        }
+      }
+    }
+    localStorage.setItem(BG_KEY, "indexeddb_stored_history"); 
+  } else { 
+    localStorage.setItem(BG_KEY, targetSource); 
+  } 
+  
+  localStorage.setItem(BG_TYPE_KEY, selected.isVideo ? 'video' : 'image'); 
+  
+  // 2. CORE PERFORMANCE ROUTER: Passes media links directly down to canvas handlers
+  if (selected.isVideo) {
+    if (typeof applyVideoBackground === 'function') {
+      applyVideoBackground(targetSource);
+    } else if (typeof applyBackground === 'function') {
+      applyBackground(targetSource, true);
+    }
+  } else {
+    if (typeof applyImageBackground === 'function') {
+      applyImageBackground(targetSource);
+    } else if (typeof applyBackground === 'function') {
+      applyBackground(targetSource, false);
+    }
+  }
+  
+  // 3. CACHE MAINTENANCE: Rotate selection back to position 0 
+  history.splice(index, 1); 
+  history.unshift(selected); 
+  localStorage.setItem('customBackgroundHistory', JSON.stringify(history)); 
+  
+  // 4. RE-DRAW UI: Correctly await the async renderer
+  await renderBackgroundHistoryUI(); 
+} 
+
+// =========================================================================
+// RENDER ENGINE STARTS HERE
+// =========================================================================
+async function renderBackgroundHistoryUI() { 
+  const container = document.getElementById('recentBgContainer'); 
+  if (!container) return; 
+  
+  const history = getHistoryMetadata(); 
+  if (!Array.isArray(history) || history.length === 0) { 
+    container.innerHTML = '<div style="grid-column: span 3; text-align: center; font-size: 0.8rem; color: #53535f; padding: 20px 0;">No background history found.</div>'; 
+    return; 
+  } 
+  
+  container.innerHTML = ''; 
+  
+  for (let idx = 0; idx < history.length; idx++) { 
+    const item = history[idx]; 
+    const cleanLabel = item.fileName ? item.fileName : "Web Asset Link"; 
+    let sourcePath = item.value; 
+    
+    if (item.isStoredFile) { 
+      try { 
+        const loadFunc = typeof loadFileFromDB === 'function' ? loadFileFromDB : (typeof getFileFromDB === 'function' ? getFileFromDB : null); 
+        if (loadFunc) { 
+          const fileRecord = await loadFunc(item.id); 
+          if (fileRecord) { 
+            const finalBlob = fileRecord.file ? fileRecord.file : fileRecord; 
+            sourcePath = URL.createObjectURL(finalBlob); 
+          } 
+        } 
+      } catch (err) { console.warn(err); } 
+    }
+
+    // PERFORMANCE OPTIMIZATION: Removed 'autoplay'. Added 'preload="metadata"'.
+    // The video is completely paused on load so it consumes 0% CPU/GPU power in the background!
+    // PERFORMANCE OPTIMIZATION: Removed 'autoplay'. Added 'preload="metadata"'.
+    // The video is completely paused on load so it consumes 0% CPU/GPU power in the background!
+    let visualPreviewHTML = '';
+    if (item.isVideo) {
+      visualPreviewHTML = `<video muted loop playsinline preload="metadata" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;"><source src="${sourcePath}"></video>`;
+    } else {
+      visualPreviewHTML = `<div style="width: 100%; height: 100%; background-image: url('${sourcePath}'); background-size: cover; background-position: center; pointer-events: none;"></div>`;
+    }
+    
+    // FIXED: Cleaned up hover functions to ONLY shift the border color. Removed scale() to eliminate scrollbar bug shaking!
+    const cardHTML = ` 
+      <div onclick="selectHistoryItem(${idx})" 
+           onmouseenter="const v=this.querySelector('video'); if(v) v.play().catch(e=>{});"
+           onmouseleave="const v=this.querySelector('video'); if(v) {v.pause(); v.currentTime=0;}"
+           title="${cleanLabel}" 
+           style="background-color: #121214; border: 1px solid #3a3a42; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: border-color 0.2s; height: 85px; overflow: hidden; position: relative;" 
+           onmouseover="this.style.borderColor='#9146ff';" 
+           onmouseout="this.style.borderColor='#3a3a42';"> 
+        <div style="width: 100%; height: 60px; background-color: #09090b; border-bottom: 1px solid #232329; overflow: hidden;">
+          ${visualPreviewHTML}
+        </div>
+        <div style="font-size: 0.65rem; color: #adadb8; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; width: 100%; padding: 4px 6px; font-weight: 500; background-color: #1a1a1e; box-sizing: border-box;">
+          ${cleanLabel}
+        </div> 
+      </div> 
+    `;
+
+    container.insertAdjacentHTML('beforeend', cardHTML);
+  }
+}
+
+async function loadBackground() { 
+  const savedBgMarker = localStorage.getItem(BG_KEY); 
+  const bgType = localStorage.getItem(BG_TYPE_KEY) || 'image'; 
+  
+  if (savedBgMarker === "indexeddb_stored_history") { 
+    const history = getHistoryMetadata(); 
+    
+    if (Array.isArray(history) && history.length > 0) { 
+      const currentActiveAsset = history[0]; // Targeted explicit array index reference pointer
+      
+      if (currentActiveAsset && currentActiveAsset.isStoredFile) { 
+        const cachedFile = await loadFileFromDB(currentActiveAsset.id); 
+        if (cachedFile) { 
+          const localSessionUrl = URL.createObjectURL(cachedFile); 
+          applyBackground(localSessionUrl, currentActiveAsset.isVideo); 
+          return; 
+        } 
+      } else if (currentActiveAsset) { 
+        applyBackground(currentActiveAsset.value, currentActiveAsset.isVideo); 
+        return; 
+      } 
+    } 
+  } 
+  
+  if (savedBgMarker && savedBgMarker !== "indexeddb_stored_history") { 
+    applyBackground(savedBgMarker, bgType === 'video'); 
+  } 
+}
+
+function openBackgroundSettings() { 
+  const modal = document.getElementById('backgroundModal'); 
+  if (modal) {
+    modal.classList.add('open'); 
+  }
+  
+  // Forces a UI state refresh immediately before showing the screen layout panel
+  renderBackgroundHistoryUI(); 
+  
+  try {
+    loadBackground(); 
+  } catch (e) {
+    console.error("Background loader engine error:", e);
+  }
+  
+  if (document.activeElement) {
+    document.activeElement.blur(); 
+  }
+}
+
+function closeBackgroundSettings() { 
+  const modal = document.getElementById('backgroundModal'); 
+  if (modal) modal.classList.remove('open'); 
+  if (document.activeElement) document.activeElement.blur(); 
+} 
+
+function handleBackgroundUrlChange(event) { 
+  const preview = document.getElementById('bgPreview'); 
+  if (!preview) return;
+
+  const url = event.target.value.trim(); 
+  if (url) { 
+    if (isVideoFile(url)) { 
+      // DYNAMIC MP4 PREVIEW: Injects an auto-playing muted loop element into the preview box
+      preview.innerHTML = '<video autoplay muted loop playsinline style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"><source src="' + url + '"></video>'; 
+      preview.style.backgroundImage = 'none';
+    } else { 
+      // IMAGE / GIF PREVIEW: Falls back cleanly to high-utility background styling handles
+      preview.innerHTML = ''; 
+      preview.style.backgroundImage = 'url(' + url + ')'; 
+    } 
+  } else { 
+    preview.innerHTML = ''; 
+    preview.style.backgroundImage = 'none'; 
+  } 
+} 
+
+function applyImageBackground(bgSource) { 
+  const videoEl = document.getElementById('bgVideo'); 
+  if (videoEl) videoEl.style.visibility = 'hidden'; 
+  
+  const workspace = document.getElementById('videoWorkspace'); 
+  if (workspace) workspace.style.backgroundImage = 'url(' + bgSource + ')'; 
+  
+  // FIXED: Updates your live thumbnail preview window automatically for static images and GIFs
+  const preview = document.getElementById('bgPreview'); 
+  if (preview) { 
+    preview.innerHTML = ''; 
+    preview.style.backgroundImage = 'url(' + bgSource + ')'; 
+  } 
+} 
+
+function applyVideoBackground(bgSource) { 
+  const videoEl = document.getElementById('bgVideo'); 
+  const workspace = document.getElementById('videoWorkspace'); 
+  if (workspace) workspace.style.backgroundImage = 'none'; 
+  
+  if (videoEl) { 
+    videoEl.src = bgSource; 
+    videoEl.style.visibility = 'visible'; 
+    videoEl.style.display = 'block'; 
+    videoEl.play().catch(err => { 
+      console.log('Autoplay blocked:', err); 
+    }); 
+  }
+
+  // FIXED: Updates your live thumbnail preview window automatically for MP4 and WebM videos
+  const preview = document.getElementById('bgPreview');
+  if (preview) {
+    preview.innerHTML = '<video autoplay muted loop playsinline style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"><source src="' + bgSource + '"></video>';
+    preview.style.backgroundImage = 'none';
+  }
+} 
+
+function applyBackground(bgSource, isVideo) { 
+  if (isVideo) { 
+    applyVideoBackground(bgSource); 
+  } else { 
+    applyImageBackground(bgSource); 
+  } 
+} 
+
+async function clearBackgroundHistory() { 
+  if (!confirm('Completely purge your recent background history tracker?')) return; 
+  const history = getHistoryMetadata(); 
+  try { 
+    const db = await getDB(); 
+    const tx = db.transaction("backgrounds", "readwrite"); 
+    const store = tx.objectStore("backgrounds"); 
+    history.forEach(item => { 
+      if (item.isStoredFile) store.delete(item.id); 
+    }); 
+  } catch (e) { 
+    console.error("History wipe structural error:", e); 
+  } 
+  localStorage.removeItem('customBackgroundHistory'); 
+  renderBackgroundHistoryUI(); 
+} 
+
+async function resetBackground() { 
+  if (confirm('Reset background to default?')) { 
+    localStorage.removeItem(BG_KEY); 
+    localStorage.removeItem(BG_TYPE_KEY); 
+    await clearBackgroundHistory(); 
+    const workspace = document.getElementById('videoWorkspace'); 
+    if (workspace) workspace.style.backgroundImage = 'none'; 
+    const videoEl = document.getElementById('bgVideo'); 
+    if (videoEl) videoEl.style.visibility = 'hidden'; 
+    const preview = document.getElementById('bgPreview'); 
+    if (preview) { 
+      preview.innerHTML = ''; 
+      preview.style.backgroundImage = 'none'; 
+    } 
+    document.getElementById('bgUrl').value = ''; 
+    document.getElementById('bgUpload').value = ''; 
+    closeBackgroundSettings(); 
+  } 
+}
+
+// =========================================================================
+// DYNAMIC MULTI-KEY INDEXEDDB DATABASE ACTIONS
+// =========================================================================
+
+function getDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open("DMMHubAssets", 1);
+        request.onupgradeneeded = e => e.target.result.createObjectStore("backgrounds");
+        request.onsuccess = e => resolve(e.target.result);
+        request.onerror = e => reject(e.target.error);
+    });
+}
+
+
+async function saveFileToDB(id, file) {
+    try {
+        const db = await getDB();
+        const tx = db.transaction("backgrounds", "readwrite");
+        tx.objectStore("backgrounds").put(file, id); // Uses unique asset ID values
+    } catch (e) {
+        console.error("IndexedDB Save Failed:", e);
+    }
+}
+
+async function loadFileFromDB(id) {
+    try {
+        const db = await getDB();
+        return new Promise((resolve) => {
+            const tx = db.transaction("backgrounds", "readonly");
+            const req = tx.objectStore("backgrounds").get(id);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
+// Global memory state key for tracking custom added streams
+const CUSTOM_STREAMS_KEY = 'customInjectedStreams';
+let customStreamListArray = JSON.parse(localStorage.getItem(CUSTOM_STREAMS_KEY) || '[]');
+let customSectionCollapsedState = true;
+
+// Run an initial structural render block when the webpage boots up
+document.addEventListener("DOMContentLoaded", () => {
+    renderCustomStreamerSidebar();
+});
+
+function toggleCustomSection() {
+    customSectionCollapsedState = !customSectionCollapsedState;
+    const sectionEl = document.getElementById('customStreamersSection');
+    if (sectionEl) {
+        sectionEl.classList.toggle('collapsed', customSectionCollapsedState);
+    }
+}
+
+function handleCustomStreamPaste(event) {
+    // Wait a brief split-second for the clipboard data engine to land inside the input field
+    setTimeout(() => {
+        const inputEl = document.getElementById('customStreamInput');
+        if (!inputEl) return;
+        
+        let rawUrl = inputEl.value.trim().toLowerCase();
+        if (!rawUrl) return;
+
+        let extractedUser = "";
+        let targetPlatform = "";
+
+        // URL Parsing Layer
+        if (rawUrl.includes("twitch.tv/")) {
+            targetPlatform = "twitch";
+            const parts = rawUrl.split("twitch.tv/");
+            if (parts[1]) extractedUser = parts[1].split(/[?#\/]/)[0];
+        } else if (rawUrl.includes("://kick.com")) {
+            targetPlatform = "kick";
+            const parts = rawUrl.split("://kick.com");
+            if (parts[1]) extractedUser = parts[1].split(/[?#\/]/)[0];
+        }
+
+        extractedUser = extractedUser.trim();
+
+        if (!extractedUser || !targetPlatform) {
+            alert("Invalid Link. Please paste a standard Twitch or Kick stream URL.");
+            inputEl.value = "";
+            return;
+        }
+
+        // Avoid adding duplicate records for the exact same username on the same platform
+        const exists = customStreamListArray.some(s => s.user === extractedUser && s.platform === targetPlatform);
+        
+        if (!exists) {
+            // Generate a brand new, clean display name capitalization structure
+            const displayName = extractedUser.charAt(0).toUpperCase() + extractedUser.slice(1);
+            
+            // Build the new standalone stream data object structure
+            const newStreamObject = {
+                name: displayName,
+                platform: targetPlatform,
+                user: extractedUser
+            };
+
+            customStreamListArray.push(newStreamObject);
+            localStorage.setItem(CUSTOM_STREAMS_KEY, JSON.stringify(customStreamListArray));
+            
+            // Automatically expand the section so the user see their newly added channel
+            customSectionCollapsedState = false;
+            const sectionEl = document.getElementById('customStreamersSection');
+            if (sectionEl) sectionEl.classList.remove('collapsed');
+
+            renderCustomStreamerSidebar();
+        }
+        
+        inputEl.value = ""; // Flush input field
+    }, 20);
+}
+
+function renderCustomStreamerSidebar() { 
+  const container = document.getElementById('customStreamerList'); 
+  if (!container) return; 
+  
+  if (customStreamListArray.length === 0) { 
+    container.innerHTML = '<li class="favorite-placeholder" style="font-size: 0.8rem; color: #53535f; padding: 4px 8px;">No custom streams loaded yet. Paste a link below.</li>'; 
+    return; 
+  } 
+  
+  // Build interactive sidebar list item lines with delete buttons to clean up old layouts 
+  container.innerHTML = customStreamListArray.map((streamer, idx) => { 
+    const icon = streamer.platform === 'twitch' ? '🟣' : '🟢'; 
+    return ` 
+      <li style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; font-size: 0.85rem; color: #adadb8; background-color: #26262c; margin-bottom: 4px; border-radius: 4px;"> 
+        <button class="member-btn" onclick="focusCustomPlayer(${idx})" style="background: none; border: none; color: inherit; text-align: left; cursor: pointer; flex: 1; font: inherit;"> 
+          ${icon} ${streamer.name} 
+        </button> 
+        
+        <!-- FIXED: Added event.stopPropagation() shield to isolate the button click event -->
+        <button onclick="event.stopPropagation(); removeCustomStream(${idx});" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; padding: 0 4px; font-weight: bold;" title="Remove channel">×</button> 
+      </li> 
+    `; 
+  }).join(''); 
+}
+
+// =========================================================================
+// RESTORED: INDIVIDUAL CUSTOM STREAMER REMOVAL ENGINE (CLICK HANDLER)
+// =========================================================================
+function removeCustomStream(index) {
+    if (!customStreamListArray || !customStreamListArray[index]) return;
+
+    console.log(`🧹 Scraping custom stream profile from memory keys: ${customStreamListArray[index].name}`);
+
+    // 1. Slice out the specific row record index
+    customStreamListArray.splice(index, 1);
+
+    // 2. Commit the trimmed list array map back to permanent LocalStorage cache keys
+    localStorage.setItem(CUSTOM_STREAMS_KEY, JSON.stringify(customStreamListArray));
+
+    // 3. Immediately redraw the visual sidebar panel tray listing elements
+    renderCustomStreamerSidebar();
+}
+function saveCustomStreamsToDisk() {
+    return new Promise((resolve) => {
+        localStorage.setItem(CUSTOM_STREAMS_KEY, JSON.stringify(customStreamListArray));
+        resolve();
+    });
+}
+// =========================================================================
+// SECURE USER AUTHENTICATION & SINGLE-RECORD DEPLOYMENT CONTROLLERS
+// =========================================================================
+
+// Automatically monitors user login state changes on page boot
+document.addEventListener("DOMContentLoaded", () => {
+    if (dbClient && dbClient.auth) {
+        // Query current session state
+        dbClient.auth.getSession().then(({ data: { session } }) => {
+            updateAdminPanelUIState(session);
+        });
+
+        // Listen for realtime login/logout triggers natively
+        dbClient.auth.onAuthStateChange((_event, session) => {
+            updateAdminPanelUIState(session);
+        });
+    }
+});
+
+// Listener tracking to cleanly exit the deployment window when clicking outside
+document.addEventListener("DOMContentLoaded", () => {
+    const deployModal = document.getElementById('deployModal');
+    if (deployModal) {
+        deployModal.addEventListener('click', function(event) {
+            if (event.target === deployModal) closeDeployModal();
+        });
+    }
+});
+
+function openDeployModal() {
+    const modal = document.getElementById('deployModal');
+    if (modal) modal.classList.add('open');
+    
+    // Wipe old text fields clean for fresh deployment runs
+    document.getElementById('deployTeamName').value = "";
+    document.getElementById('deployStreamerName').value = "";
+    document.getElementById('deployStreamerUrl').value = "";
+}
+
+function closeDeployModal() {
+    const modal = document.getElementById('deployModal');
+    if (modal) modal.classList.remove('open');
+}
+
+async function executeStreamerDeployment() {
+    const teamInput = document.getElementById('deployTeamName').value.trim();
+    const nameInput = document.getElementById('deployStreamerName').value.trim();
+    const urlInput = document.getElementById('deployStreamerUrl').value.trim();
+
+    if (!teamInput || !nameInput || !urlInput) {
+        alert("Please completely fill out the Team Name, Streamer Name, and Channel URL.");
+        return;
+    }
+
+    // 1. SAFEST REGEX STRING EXTRACTOR: Bulletproof parsing that cannot cause array split crashes
+    let parsedUser = urlInput;
+    let platform = "twitch";
+
+    if (urlInput.toLowerCase().includes("twitch.tv/")) {
+        const match = urlInput.match(/twitch\.tv\/([a-zA-Z0-9_]{4,25})/i);
+        if (match && match[1]) parsedUser = match[1];
+    } else if (urlInput.toLowerCase().includes("://kick.com")) {
+        platform = "kick";
+        const match = urlInput.match(/kick\.com\/([a-zA-Z0-9_]{3,25})/i);
+        if (match && match[1]) parsedUser = match[1];
+    }
+    parsedUser = parsedUser.trim().toLowerCase();
+
+    // 2. Uniform ID string normalization for cross-origin matching
+    const cleanTeamId = 'team-' + teamInput.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const newMemberObj = { name: nameInput, platform: platform, user: parsedUser };
+
+    // 3. Evaluate your live state arrays to see if team matching keys exist
+    let targetTeam = globalTeamsData.find(t => t.id === cleanTeamId);
+
+    if (targetTeam) {
+        const channelExists = targetTeam.members.some(m => m.user === parsedUser && m.platform === platform);
+        if (channelExists) {
+            alert(`This streamer is already assigned to ${targetTeam.name}!`);
+            return;
+        }
+
+        // Add player directly inside the pre-existing group roster payload array context
+        targetTeam.members.push(newMemberObj);
+
+        // CLOUD RUN: Synchronize the expanded array list straight down to Supabase row columns
+        const { error } = await dbClient
+            .from('teams_data')
+            .update({ members: targetTeam.members })
+            .eq('id', cleanTeamId);
+
+        if (error) {
+            console.error("Supabase Sync Failure:", error.message);
+            alert("Database Sync Failed: " + error.message);
+            return;
+        }
+    } else {
+        // Build a brand new team dictionary record block structure from scratch
+        const newTeamObject = {
+            id: cleanTeamId,
+            name: teamInput,
+            members: [newMemberObj],
+            is_custom_created: true
+        };
+
+        // CLOUD RUN: Insert a fresh entry row directly inside your project database tables
+        const { error } = await dbClient
+            .from('teams_data')
+            .insert([newTeamObject]);
+
+        if (error) {
+            console.error("Supabase Save Failure:", error.message);
+            alert("Failed to insert row globally: " + error.message);
+            return;
+        }
+
+        globalTeamsData.push({
+            id: cleanTeamId,
+            name: teamInput,
+            members: [newMemberObj],
+            isCustomCreated: true
+        });
+    }
+
+    // 4. Force UI sidebar map engines to re-evaluate and draw elements clean
+    buildSidebarMenu(globalTeamsData);
+    closeDeployModal();
+}
+
+function updateAdminPanelUIState(session) {
+    const loggedOutSection = document.getElementById('loggedOutAdminForm');
+    const loggedInSection = document.getElementById('loggedInAdminForm');
+    const adminEmailText = document.getElementById('activeAdminEmail');
+    const headerTitle = document.getElementById('adminPanelHeader');
+    const adminControls = document.getElementById('adminControlsContainer');
+
+    if (!loggedOutSection || !loggedInSection || !adminControls) return;
+
+    if (session && session.user) {
+        loggedOutSection.style.display = 'none';
+        loggedInSection.style.display = 'flex';
+        
+        let userDisplayName = "Anonymous Member";
+        if (session.user.user_metadata && session.user.user_metadata.display_username) {
+            userDisplayName = session.user.user_metadata.display_username;
+        } else {
+            userDisplayName = session.user.email.split('@')[0];
+        }
+
+        if (adminEmailText) adminEmailText.innerText = userDisplayName;
+        
+        // SECURE SYSTEM HANDSHAKE IDENTITY LOCK: Validates your custom user token index
+        const masterAdminID = '83727092-9e46-446b-9766-d7b1651a4667';
+
+        if (session.user.id === masterAdminID) {
+            if (headerTitle) headerTitle.innerHTML = "🔓 Admin Mode Active";
+            
+            // Forced override styling rules to guarantee the green button displays
+            adminControls.style.display = 'block';
+            adminControls.style.setProperty('display', 'block', 'important');
+        } else {
+            if (headerTitle) headerTitle.innerHTML = "👤 Welcome back!";
+            adminControls.style.display = 'none';  
+        }
+    } else {
+        loggedOutSection.style.display = 'flex';
+        loggedInSection.style.display = 'none';
+        adminControls.style.display = 'none';
+        if (headerTitle) headerTitle.innerHTML = "Account Gate";
+    }
+}
+// =========================================================================
+// SUPABASE GLOBAL CUSTOM TEAM CREATOR ENGINE
+// =========================================================================
+// =========================================================================
+// POPUP WINDOW STREAMER ROSTER DEPLOYMENT SYSTEM
+// =========================================================================
+
+// Safe outer background window click listener hooks for the team pop-up
+document.addEventListener("DOMContentLoaded", () => {
+    const deployModal = document.getElementById('deployModal');
+    if (deployModal) {
+        deployModal.addEventListener('click', function(event) {
+            if (event.target === deployModal) closeDeployModal();
+        });
+    }
+});
+
+function openDeployModal() {
+    const modal = document.getElementById('deployModal');
+    if (modal) modal.classList.add('open');
+    
+    // Auto clear values for fresh inputs
+    document.getElementById('deployTeamName').value = "";
+    document.getElementById('deployStreamerName').value = "";
+    document.getElementById('deployStreamerUrl').value = "";
+}
+
+function closeDeployModal() {
+    const modal = document.getElementById('deployModal');
+    if (modal) modal.classList.remove('open');
+}
+
+async function executeStreamerDeployment() {
+    const teamInput = document.getElementById('deployTeamName').value.trim();
+    const nameInput = document.getElementById('deployStreamerName').value.trim();
+    const urlInput = document.getElementById('deployStreamerUrl').value.trim();
+
+    if (!teamInput || !nameInput || !urlInput) {
+        alert("Please completely fill out the Team Name, Streamer Name, and Channel URL.");
+        return;
+    }
+
+    // 1. FIXED URL PARSING ENGINE: Immune to array splits crashes
+    let parsedUser = urlInput;
+    let platform = "twitch";
+
+    if (urlInput.toLowerCase().includes("twitch.tv/")) {
+        const parts = urlInput.split("twitch.tv/");
+        if (parts[1]) {
+            parsedUser = parts[1].split(/[?#\/]/)[0];
+        }
+    } else if (urlInput.toLowerCase().includes("://kick.com")) {
+        platform = "kick";
+        const parts = urlInput.split("://kick.com");
+        if (parts[1]) {
+            parsedUser = parts[1].split(/[?#\/]/)[0];
+        }
+    }
+    parsedUser = parsedUser.trim().toLowerCase();
+
+    // 2. Compute Unique Uniform Team String Keys
+    const cleanTeamId = 'team-' + teamInput.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const newMemberObj = { name: nameInput, platform: platform, user: parsedUser };
+
+    // 3. Search Workspace Memory array map to look for an existing team group matching this clean ID
+    let targetTeam = globalTeamsData.find(t => t.id === cleanTeamId);
+
+    if (targetTeam) {
+        const channelExists = targetTeam.members.some(m => m.user === parsedUser && m.platform === platform);
+        if (channelExists) {
+            alert(`This streamer is already assigned to ${targetTeam.name}!`);
+            return;
+        }
+
+        targetTeam.members.push(newMemberObj);
+
+        const { error } = await dbClient
+            .from('teams_data')
+            .update({ members: targetTeam.members })
+            .eq('id', cleanTeamId);
+
+        if (error) {
+            console.error("Supabase Array Modification Defect:", error.message);
+            alert("Database Error: " + error.message);
+            return;
+        }
+    } else {
+        const newTeamObject = {
+            id: cleanTeamId,
+            name: teamInput,
+            members: [newMemberObj],
+            is_custom_created: true
+        };
+
+        const { error } = await dbClient
+            .from('teams_data')
+            .insert([newTeamObject]);
+
+        if (error) {
+            console.error("Supabase Row Generation Defect:", error.message);
+            alert("Database Error: " + error.message);
+            return;
+        }
+
+        globalTeamsData.push({
+            id: cleanTeamId,
+            name: teamInput,
+            members: [newMemberObj],
+            isCustomCreated: true
+        });
+    }
+
+    buildSidebarMenu(globalTeamsData);
+    closeDeployModal();
+}
+// =========================================================================
+// SUPABASE GLOBAL STREAMER RE-ASSIGNMENT ENGINES
+// =========================================================================
+async function saveCustomStreamsToDisk() {
+    console.log("📡 Syncing custom streamer assignments with Supabase cloud server...");
+    
+    // Loop through active teams and update their members array columns on the cloud
+    for (const team of globalTeamsData) {
+        const { error } = await supabase
+            .from('teams_data')
+            .update({ members: team.members })
+            .eq('id', team.id);
+
+        if (error) {
+            console.error(`Failed to update members for team ${team.name}:`, error);
+        }
+    }
+}
+// =========================================================================
+// UNIFIED AUTHENTICATION CONTROLLER (POPUP MODAL COMPATIBLE)
+// =========================================================================
+let isRegisterMode = false;
+
+function openAuthModal(startInRegisterMode = false) {
+    const modal = document.getElementById('authModal');
+    if (!modal) return;
+    modal.classList.add('open');
+    toggleAuthMode(startInRegisterMode);
+}
+
+function closeAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.remove('open');
+}
+
+function toggleAuthMode(switchToRegister) {
+    isRegisterMode = switchToRegister;
+    const title = document.getElementById('authModalTitle');
+    const primaryBtn = document.getElementById('authPrimaryBtn');
+    const switchText = document.getElementById('authSwitchText');
+    const usernameGroup = document.getElementById('authUsernameGroup');
+    
+    if (!title || !primaryBtn || !switchText || !usernameGroup) return;
+    
+    // Clear out input fields for clean states when switching views
+    document.getElementById('authUsernameInput').value = "";
+    document.getElementById('authEmailInput').value = "";
+    document.getElementById('authPasswordInput').value = "";
+    
+    if (isRegisterMode) {
+        title.innerHTML = "📝 Register an Account";
+        primaryBtn.innerHTML = "Register an Account";
+        primaryBtn.style.backgroundColor = "#22c55e"; // Success Green
+        usernameGroup.style.display = 'block';         // Reveal username entry on registration
+        switchText.innerHTML = `Already have an account? <span onclick="toggleAuthMode(false)" style="color: #9146ff; cursor: pointer; font-weight: bold; text-decoration: underline;">Log In here</span>`;
+    } else {
+        title.innerHTML = "🔒 Sign In";
+        primaryBtn.innerHTML = "Sign In";
+        primaryBtn.style.backgroundColor = "#9146ff"; // Twitch Purple
+        usernameGroup.style.display = 'none';          // Hide username on standard login
+        switchText.innerHTML = `Need an account? <span onclick="toggleAuthMode(true)" style="color: #9146ff; cursor: pointer; font-weight: bold; text-decoration: underline;">Register here</span>`;
+    }
+}
+
+async function submitAuthForm() {
+    const usernameInput = document.getElementById('authUsernameInput');
+    const emailInput = document.getElementById('authEmailInput');
+    const passwordInput = document.getElementById('authPasswordInput');
+    
+    if (!usernameInput || !emailInput || !passwordInput) {
+        console.error("❌ Critical: Modal text input fields are missing from your HTML layout.");
+        return;
+    }
+    
+    const username = usernameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    
+    if (!email || !password) {
+        alert("Please enter both your email address and password.");
+        return;
+    }
+    
+    if (isRegisterMode) {
+        if (!username) {
+            alert("Please pick a custom username for your profile tracking display.");
+            return;
+        }
+
+        // TRIGGER USER REGISTRATION WRAPPED WITH DISPLAY NAME METADATA
+        const { data, error } = await dbClient.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: { display_username: username }
+            }
+        });
+        
+        if (error) {
+            const errMsg = error.message.toLowerCase();
+            console.log("🔍 Exact registration error caught from server:", error.message);
+            
+            // CATCH ALL: Intercepts generic "saving new user" trigger crashes, unique violations, and custom exceptions
+            if (errMsg.includes("unique") || 
+                errMsg.includes("taken") || 
+                errMsg.includes("exists") || 
+                errMsg.includes("saving new user") || 
+                errMsg.includes("database error")) {
+                
+                alert("❌ Registration Failed: That username is already in use. Please pick a different display name!");
+            } else {
+                // Displays other network issues like invalid email formatting or weak passwords
+                alert("Registration Failed: " + error.message);
+            }
+            return;
+        }
+        
+        alert("🚀 Registration complete! You can now log into your profile safely.");
+        toggleAuthMode(false);
+    } else {
+        // TRIGGER SECURE ACCOUNT SIGN IN
+        const { data, error } = await dbClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+        
+        if (error) {
+            alert("Access Denied: " + error.message);
+            return;
+        }
+        
+        closeAuthModal();
+    }
+}
+
+async function handleAdminLogout() {
+    if (dbClient && dbClient.auth) {
+        await dbClient.auth.signOut();
+    }
+}
+// =========================================================================
+// UNIFIED BACKGROUND ENGINE CONTROLLERS (LAG-PROTECTED & STORAGE PERSISTENT)
+// =========================================================================
+const BG_KEY = 'customBackground';
+const BG_TYPE_KEY = 'customBackgroundType';
+
+function isVideoFile(urlOrName) {
+    if (!urlOrName) return false;
+    const cleanStr = urlOrName.split('?')[0].split('#')[0].toLowerCase();
+    return cleanStr.endsWith('.mp4') || cleanStr.endsWith('.webm') || cleanStr.endsWith('.ogg');
+}
+
+function getHistoryMetadata() {
+    try {
+        return JSON.parse(localStorage.getItem('customBackgroundHistory') || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+async function handleBackgroundUpload(event) { 
+  const file = event.target.files[0]; 
+  if (!file) return; 
+  
+  const isVideo = isVideoFile(file.name); 
+  const sessionUrl = URL.createObjectURL(file); 
+  
+  localStorage.setItem(BG_TYPE_KEY, isVideo ? 'video' : 'image'); 
+  localStorage.setItem(BG_KEY, "indexeddb_stored_history"); 
+  
+  await addBackgroundToHistory(sessionUrl, isVideo, file); 
+  applyBackground(sessionUrl, isVideo); 
+}
+
+function applyBackgroundFromUrl() { 
+  const url = document.getElementById('bgUrl').value.trim(); 
+  if (!url) { 
+    alert('Please enter a valid image or video URL'); 
+    return; 
+  } 
+  const isVideo = isVideoFile(url); 
+  localStorage.setItem(BG_KEY, url); 
+  localStorage.setItem(BG_TYPE_KEY, isVideo ? 'video' : 'image'); 
+  addBackgroundToHistory(url, isVideo, null); 
+  applyBackground(url, isVideo); 
+}
+
+function applyBackground(source, isVideo) {
+    if (isVideo) {
+        applyVideoBackground(source);
+    } else {
+        applyImageBackground(source);
+    }
+}
+
+function applyImageBackground(bgSource) { 
+  const videoEl = document.getElementById('bgVideo'); 
+  if (videoEl) videoEl.style.visibility = 'hidden'; 
+  
+  const workspace = document.getElementById('videoWorkspace'); 
+  if (workspace) workspace.style.backgroundImage = 'url(' + bgSource + ')'; 
+  
+  const preview = document.getElementById('bgPreview'); 
+  if (preview) { 
+    preview.innerHTML = ''; 
+    preview.style.backgroundImage = 'url(' + bgSource + ')'; 
+  } 
+} 
+
+function applyVideoBackground(bgSource) { 
+  const videoEl = document.getElementById('bgVideo'); 
+  const workspace = document.getElementById('videoWorkspace'); 
+  if (workspace) workspace.style.backgroundImage = 'none'; 
+  
+  if (videoEl) { 
+    videoEl.src = bgSource; 
+    videoEl.style.visibility = 'visible'; 
+    videoEl.style.display = 'block'; 
+    videoEl.play().catch(err => { console.log('Autoplay blocked:', err); }); 
+  }
+
+  const preview = document.getElementById('bgPreview');
+  if (preview) {
+    preview.innerHTML = '<video autoplay muted loop playsinline style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"><source src="' + bgSource + '"></video>';
+    preview.style.backgroundImage = 'none';
+  }
+}
+
+async function addBackgroundToHistory(sourceValue, isVideo, rawFile = null) { 
+  let history = getHistoryMetadata(); 
+  const uniqueId = rawFile ? 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9) : sourceValue; 
+  
+  history = history.filter(item => item.value !== sourceValue); 
+  
+  if (rawFile && typeof saveFileToDB === 'function') { 
+    await saveFileToDB(uniqueId, rawFile); 
+  } 
+  
+  const determinedName = rawFile ? rawFile.name : (sourceValue.length > 25 ? sourceValue.substring(0, 22) + '...' : sourceValue);
+
+  history.unshift({ 
+    id: uniqueId, 
+    value: sourceValue, 
+    isVideo: isVideo, 
+    isStoredFile: rawFile !== null, 
+    fileName: determinedName 
+  }); 
+  
+  if (history.length > 15) { 
+    const removedItem = history.pop(); 
+    if (removedItem.isStoredFile && typeof getDB === 'function') { 
+      try { 
+        const db = await getDB(); 
+        const tx = db.transaction("backgrounds", "readwrite"); 
+        tx.objectStore("backgrounds").delete(removedItem.id); 
+      } catch(e) { console.error(e); } 
+    } 
+  } 
+  
+  localStorage.setItem('customBackgroundHistory', JSON.stringify(history)); 
+  await renderBackgroundHistoryUI(); 
+} 
+
+async function selectHistoryItem(index) { 
+  let history = getHistoryMetadata(); 
+  const selected = history[index]; 
+  if (!selected) return; 
+  
+  let targetSource = selected.value; 
+  
+  if (selected.isStoredFile) {
+    if (typeof loadFileFromDB === 'function') {
+      const cachedFile = await loadFileFromDB(selected.id); 
+      if (cachedFile) { 
+        targetSource = URL.createObjectURL(cachedFile); 
+      } else { 
+        alert("File payload missing from storage."); 
+        return; 
+      }
+    }
+    localStorage.setItem(BG_KEY, "indexeddb_stored_history"); 
+  } else { 
+    localStorage.setItem(BG_KEY, targetSource); 
+  } 
+  
+  localStorage.setItem(BG_TYPE_KEY, selected.isVideo ? 'video' : 'image'); 
+  applyBackground(targetSource, selected.isVideo); 
+  
+  history.splice(index, 1); 
+  history.unshift(selected); 
+  localStorage.setItem('customBackgroundHistory', JSON.stringify(history)); 
+  
+  await renderBackgroundHistoryUI(); 
+} 
+
+async function renderBackgroundHistoryUI() { 
+  const container = document.getElementById('recentBgContainer'); 
+  if (!container) return; 
+  
+  const history = getHistoryMetadata(); 
+  if (!Array.isArray(history) || history.length === 0) { 
+    container.innerHTML = '<div style="grid-column: span 3; text-align: center; font-size: 0.8rem; color: #53535f; padding: 20px 0;">No background history found.</div>'; 
+    return; 
+  } 
+  
+  container.innerHTML = '';
+
+  for (let idx = 0; idx < history.length; idx++) {
+    const item = history[idx];
+    const cleanLabel = item.fileName ? item.fileName : "Web Asset Link";
+    let sourcePath = item.value;
+
+    if (item.isStoredFile && typeof loadFileFromDB === 'function') {
+      try {
+        const cachedFile = await loadFileFromDB(item.id);
+        if (cachedFile) {
+          sourcePath = URL.createObjectURL(cachedFile);
+        }
+      } catch (err) { console.warn(err); }
+    }
+
+    let visualPreviewHTML = '';
+    if (item.isVideo) {
+      visualPreviewHTML = `<video muted loop playsinline preload="metadata" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;"><source src="${sourcePath}"></video>`;
+    } else {
+      visualPreviewHTML = `<div style="width: 100%; height: 100%; background-image: url('${sourcePath}'); background-size: cover; background-position: center; pointer-events: none;"></div>`;
+    }
+    
+    const cardHTML = ` 
+      <div onclick="selectHistoryItem(${idx})" 
+           onmouseenter="const v=this.querySelector('video'); if(v) v.play().catch(e=>{});"
+           onmouseleave="const v=this.querySelector('video'); if(v) {v.pause(); v.currentTime=0;}"
+           title="${cleanLabel}" 
+           style="background-color: #121214; border: 1px solid #3a3a42; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: border-color 0.2s; height: 85px; overflow: hidden; position: relative;" 
+           onmouseover="this.style.borderColor='#9146ff';" 
+           onmouseout="this.style.borderColor='#3a3a42';"> 
+        <div style="width: 100%; height: 60px; background-color: #09090b; border-bottom: 1px solid #232329; overflow: hidden;">
+          ${visualPreviewHTML}
+        </div>
+        <div style="font-size: 0.65rem; color: #adadb8; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; width: 100%; padding: 4px 6px; font-weight: 500; background-color: #1a1a1e; box-sizing: border-box;">
+          ${cleanLabel}
+        </div> 
+      </div> 
+    `;
+
+    container.insertAdjacentHTML('beforeend', cardHTML);
+  }
+}
+
+async function loadBackground() {
+    const savedBgMarker = localStorage.getItem(BG_KEY);
+    const bgType = localStorage.getItem(BG_TYPE_KEY) || 'image';
+    if (savedBgMarker === "indexeddb_stored_history") {
+        const history = getHistoryMetadata();
+        if (Array.isArray(history) && history.length > 0) {
+            const currentActiveAsset = history[0];
+            if (currentActiveAsset && currentActiveAsset.isStoredFile && typeof loadFileFromDB === 'function') {
+                const cachedFile = await loadFileFromDB(currentActiveAsset.id);
+                if (cachedFile) {
+                    const localSessionUrl = URL.createObjectURL(cachedFile);
+                    applyBackground(localSessionUrl, currentActiveAsset.isVideo);
+                    return;
+                }
+            } else if (currentActiveAsset) {
+                applyBackground(currentActiveAsset.value, currentActiveAsset.isVideo);
+                return;
+            }
+        }
+    } else if (savedBgMarker) {
+        applyBackground(savedBgMarker, bgType === 'video');
+    }
+}
+
+function resetBackground() {
+    localStorage.removeItem(BG_KEY);
+    localStorage.removeItem(BG_TYPE_KEY);
+    const videoEl = document.getElementById('bgVideo');
+    if (videoEl) {
+        videoEl.src = '';
+        videoEl.style.visibility = 'hidden';
+    }
+    const workspace = document.getElementById('videoWorkspace');
+    if (workspace) workspace.style.backgroundImage = 'none';
+    const preview = document.getElementById('bgPreview');
+    if (preview) {
+        preview.innerHTML = '';
+        preview.style.backgroundImage = 'none';
+    }
+}
+
+function clearBackgroundHistory() {
+    localStorage.removeItem('customBackgroundHistory');
+    renderBackgroundHistoryUI();
+}
+    </script>
+</body>
+</html>
+
