@@ -6,8 +6,8 @@
     <title>DMM Allstars Multi-POV Hub</title>
 <!-- Core Twitch SDK Engine loaded explicitly in the head -->
 <script src="https://twitch.tv"></script>
-<!-- CORRECTED: Official global delivery link that will restore the website instantly -->
-<script src="https://unpkg.com"></script>
+<!-- Corrected Production Supabase Client Engine Asset Link -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -519,26 +519,7 @@ header h1 { font-size: 1.1rem; }
             </div>
             <nav id="teamMenu" class="team-menu"></nav>
                 <!-- PLACE DIRECTLY BELOW YOUR </nav> TAG -->
-    
-    <!-- Custom Streamers Section Content Grid -->
-    <div style="padding: 15px; border-top: 2px solid #2d2d34; background-color: #18181b;">
-        <div id="customStreamersSection" class="favorites-section collapsed" style="margin-bottom: 12px;">
-            <div class="favorite-header" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
-                <h3 style="font-size: 0.95rem; margin: 0; color: #9146ff;">📺 Custom Streamers</h3>
-                <button class="favorite-collapse-btn" onclick="toggleCustomSection()" title="Collapse custom streams">▾</button>
-            </div>
-            <ul id="customStreamerList" class="favorite-list" style="list-style: none; padding-left: 0; max-height: 150px; overflow-y: auto;">
-                <li class="favorite-placeholder" style="font-size: 0.8rem; color: #53535f; padding: 4px 8px;">No custom streams loaded yet. Paste a link below.</li>
-            </ul>
-        </div>
-        
-<!-- Interactive Link Parser Input Frame -->
-<label style="display: block; font-size: 0.7rem; color: #adadb8; font-weight: bold; text-transform: uppercase; margin-bottom: 6px;"> 
-  ➕ Add Temporary Stream Link: 
-</label> 
-<input type="text" id="customStreamInput" placeholder="Paste Twitch or Kick URL..." onpaste="handleCustomStreamPaste(event)" style="width: 100%; padding: 8px; font-size: 0.85rem; background-color: #2a2a30; border: 1px solid #3a3a42; border-radius: 4px; color: #fff; box-sizing: border-box;"> 
-</div> 
-
+            
 <!-- ========================================================================= -->
 <!-- TWIN-BUTTON SIDEBAR ACCOUNT GATE & ADMIN TOOLS -->
 <!-- ========================================================================= -->
@@ -1736,82 +1717,12 @@ async function loadFileFromDB(id) {
     }
 }
 
-// Global memory state key for tracking custom added streams
-const CUSTOM_STREAMS_KEY = 'customInjectedStreams';
-let customStreamListArray = JSON.parse(localStorage.getItem(CUSTOM_STREAMS_KEY) || '[]');
-let customSectionCollapsedState = true;
-
-// Run an initial structural render block when the webpage boots up
-document.addEventListener("DOMContentLoaded", () => {
-    renderCustomStreamerSidebar();
-});
-
 function toggleCustomSection() {
     customSectionCollapsedState = !customSectionCollapsedState;
     const sectionEl = document.getElementById('customStreamersSection');
     if (sectionEl) {
         sectionEl.classList.toggle('collapsed', customSectionCollapsedState);
     }
-}
-
-function handleCustomStreamPaste(event) {
-    // Wait a brief split-second for the clipboard data engine to land inside the input field
-    setTimeout(() => {
-        const inputEl = document.getElementById('customStreamInput');
-        if (!inputEl) return;
-        
-        let rawUrl = inputEl.value.trim().toLowerCase();
-        if (!rawUrl) return;
-
-        let extractedUser = "";
-        let targetPlatform = "";
-
-        // URL Parsing Layer
-        if (rawUrl.includes("twitch.tv/")) {
-            targetPlatform = "twitch";
-            const parts = rawUrl.split("twitch.tv/");
-            if (parts[1]) extractedUser = parts[1].split(/[?#\/]/)[0];
-        } else if (rawUrl.includes("://kick.com")) {
-            targetPlatform = "kick";
-            const parts = rawUrl.split("://kick.com");
-            if (parts[1]) extractedUser = parts[1].split(/[?#\/]/)[0];
-        }
-
-        extractedUser = extractedUser.trim();
-
-        if (!extractedUser || !targetPlatform) {
-            alert("Invalid Link. Please paste a standard Twitch or Kick stream URL.");
-            inputEl.value = "";
-            return;
-        }
-
-        // Avoid adding duplicate records for the exact same username on the same platform
-        const exists = customStreamListArray.some(s => s.user === extractedUser && s.platform === targetPlatform);
-        
-        if (!exists) {
-            // Generate a brand new, clean display name capitalization structure
-            const displayName = extractedUser.charAt(0).toUpperCase() + extractedUser.slice(1);
-            
-            // Build the new standalone stream data object structure
-            const newStreamObject = {
-                name: displayName,
-                platform: targetPlatform,
-                user: extractedUser
-            };
-
-            customStreamListArray.push(newStreamObject);
-            localStorage.setItem(CUSTOM_STREAMS_KEY, JSON.stringify(customStreamListArray));
-            
-            // Automatically expand the section so the user see their newly added channel
-            customSectionCollapsedState = false;
-            const sectionEl = document.getElementById('customStreamersSection');
-            if (sectionEl) sectionEl.classList.remove('collapsed');
-
-            renderCustomStreamerSidebar();
-        }
-        
-        inputEl.value = ""; // Flush input field
-    }, 20);
 }
 
 function renderCustomStreamerSidebar() { 
