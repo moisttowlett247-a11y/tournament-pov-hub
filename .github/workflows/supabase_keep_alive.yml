@@ -11,8 +11,6 @@ jobs:
     steps:
       - name: Send API Heartbeat Ping
         run: |
-          curl -i -X POST "${{ secrets.SUPABASE_PROJECT_URL }}rpc/get_size_by_table" \
+          curl -i -X GET "${{ secrets.SUPABASE_PROJECT_URL }}teams_data?limit=1" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{}'
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
