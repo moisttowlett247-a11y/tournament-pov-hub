@@ -508,7 +508,72 @@ header h1 { font-size: 1.1rem; }
     visibility: hidden;
     border: none;
 }
+/* --- Mobile Responsive Rules --- */
+@media (max-width: 768px) {
+  
+  /* 1. Prevent parent layout overflow and collapse side-by-side splits into a column */
+  body, .main-container, .hub-layout {
+    display: flex;
+    flex-direction: column;
+    height: auto !important; /* Overrides fixed desktop heights */
+    overflow-x: hidden;
+  }
 
+  /* 2. Make Sidebar stretch across the top or collapse gracefully */
+  .sidebar, #sidebar, .team-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    box-sizing: border-box;
+    padding: 15px;
+  }
+
+  /* 3. Convert multi-stream grid configurations to a single column scroll */
+  .stream-grid, .video-container, .focus-layout {
+    grid-template-columns: 1fr !important; /* Force single column stacked streams */
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* 4. Ensure embedded video streams fit inside mobile widths cleanly */
+  iframe, video, .stream-player {
+    width: 100% !important;
+    aspect-ratio: 16 / 9; /* Maintains standard widescreen streaming formats */
+    height: auto !important;
+  }
+
+  /* 5. Reorganize modals (Login, Deploy, Background Settings) to fit tiny screens */
+  .modal-content, .popup-box, .settings-panel {
+    width: 90% !important;
+    max-width: 360px !important;
+    margin: 20px auto;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  /* 6. Push Live Chat beneath the video players instead of eating up side space */
+  .live-chat-panel, #live-chat {
+    width: 100% !important;
+    height: 350px !important; /* Fixes height for the chat scroll box */
+    margin-top: 20px;
+  }
+
+  /* 7. Optimize utility controls and navigation links for touch targets */
+  .controls-header, .utility-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  button, .btn {
+    padding: 12px 16px; /* Larger hit zones for thumbs */
+    font-size: 14px;
+  }
+}
     </style>
 </head>
 <body>
