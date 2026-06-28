@@ -2,7 +2,7 @@
 
 A high-performance, dynamic multi-stream spectator dashboard tailored for tournaments. This hub allows users to orchestrate their own custom viewing experience by pulling multiple live Twitch or Kick streams into a single, cohesive workspace.
 
-🌐 **Live Demo:**([https://github.io]
+🌐 **Live Demo:**(https://moisttowlett247-a11y.github.io/tournament-pov-hub/)
 
 ---
 
