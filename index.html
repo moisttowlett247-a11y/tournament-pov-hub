@@ -574,6 +574,26 @@ header h1 { font-size: 1.1rem; }
     font-size: 14px;
   }
 }
+/* Tabbed UI Styles */
+.modal-tabs {
+    display: flex;
+    border-bottom: 1px solid #3a3a42;
+    margin-bottom: 20px;
+}
+.tab-btn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: #adadb8;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+.tab-btn.active {
+    color: #9146ff;
+    border-bottom: 2px solid #9146ff;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
     </style>
 </head>
 <body>
@@ -684,7 +704,8 @@ header h1 { font-size: 1.1rem; }
   <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;"> 
     <button class="layout-toggle-btn" onclick="toggleLayout()" style="padding: 8px 12px; background-color: #000; color: #fff; border: 1px solid #53535f; border-radius: 4px; cursor: pointer; white-space: nowrap;">🔄 Toggle Grid/Focus Layout</button> 
     <button class="layout-toggle-btn" onclick="openBackgroundSettings()" style="padding: 8px 12px; background-color: #000; color: #fff; border: 1px solid #53535f; border-radius: 4px; cursor: pointer; white-space: nowrap;">⚙️ Background Settings</button> 
-  </div> 
+<button class="layout-toggle-btn" onclick="openUnifiedModal()">⚙️ Settings</button>  
+</div> 
 </header>
             
             <main id="videoWorkspace" class="grid-layout">
@@ -836,6 +857,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   favoriteTeamId = localStorage.getItem(FAVORITE_TEAM_KEY); 
   favoriteStreamerKeys = JSON.parse(localStorage.getItem(FAVORITE_STREAMERS_KEY) || '[]'); 
   
+  // Run this when the page loads (inside your DOMContentLoaded block)
+const savedSetting = localStorage.getItem('autoMuteSetting') === 'true';
+document.getElementById('autoMuteSetting').checked = savedSetting;
+
   const backgroundModal = document.getElementById('backgroundModal'); 
   if (backgroundModal) { 
     backgroundModal.addEventListener('click', function(event) { 
@@ -1967,7 +1992,7 @@ async function executeStreamerDeployment() {
     closeDeployModal();
 }
 
-function updateAdminPanelUIState(session) {
+async function updateAdminPanelUIState(session) {
     const loggedOutSection = document.getElementById('loggedOutAdminForm');
     const loggedInSection = document.getElementById('loggedInAdminForm');
     const adminEmailText = document.getElementById('activeAdminEmail');
@@ -1980,22 +2005,26 @@ function updateAdminPanelUIState(session) {
         loggedOutSection.style.display = 'none';
         loggedInSection.style.display = 'flex';
         
+        // 1. FETCH FROM DATABASE INSTEAD OF FALLING BACK TO EMAIL
         let userDisplayName = "Anonymous Member";
-        if (session.user.user_metadata && session.user.user_metadata.display_username) {
-            userDisplayName = session.user.user_metadata.display_username;
-        } else {
-            userDisplayName = session.user.email.split('@')[0];
+        
+        const { data: profile } = await dbClient
+            .from('profiles')
+            .select('display_name')
+            .eq('id', session.user.id)
+            .single();
+
+        if (profile && profile.display_name) {
+            userDisplayName = profile.display_name;
         }
 
         if (adminEmailText) adminEmailText.innerText = userDisplayName;
         
-        // SECURE SYSTEM HANDSHAKE IDENTITY LOCK: Validates your custom user token index
+        // SECURE SYSTEM HANDSHAKE IDENTITY LOCK
         const masterAdminID = '83727092-9e46-446b-9766-d7b1651a4667';
 
         if (session.user.id === masterAdminID) {
             if (headerTitle) headerTitle.innerHTML = "🔓 Admin Mode Active";
-            
-            // Forced override styling rules to guarantee the green button displays
             adminControls.style.display = 'block';
             adminControls.style.setProperty('display', 'block', 'important');
         } else {
@@ -2008,8 +2037,7 @@ function updateAdminPanelUIState(session) {
         adminControls.style.display = 'none';
         if (headerTitle) headerTitle.innerHTML = "Account Gate";
     }
-}
-// =========================================================================
+}// =========================================================================
 // SUPABASE GLOBAL CUSTOM TEAM CREATOR ENGINE
 // =========================================================================
 // =========================================================================
@@ -2218,7 +2246,7 @@ async function submitAuthForm() {
             email: email,
             password: password,
             options: {
-                data: { display_username: username }
+                data: { username: username }
             }
         });
         
@@ -2518,7 +2546,234 @@ function clearBackgroundHistory() {
     localStorage.removeItem('customBackgroundHistory');
     renderBackgroundHistoryUI();
 }
-    </script>
+// Switch between tabs
+function switchTab(tabName, btn) {
+    // 1. Logic to hide all tab content
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // 2. Logic to remove 'active' class from all buttons
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+    });
+
+    // 3. Logic to show the selected tab and activate the button
+    document.getElementById('tab-' + tabName).classList.add('active');
+    btn.classList.add('active');
+
+    // 4. NEW: Refresh account data if switching to the account tab
+    if (tabName === 'account') {
+        loadAccountTab();
+    }
+}
+// Open/Close
+function openUnifiedModal() { document.getElementById('unifiedSettingsModal').classList.add('open'); }
+function closeUnifiedModal() { document.getElementById('unifiedSettingsModal').classList.remove('open'); }
+
+// Save Logic
+async function saveAccountSettings() {
+    const name = document.getElementById('displayNameInput').value;
+    const fileInput = document.getElementById('avatarUpload');
+    const { data: { user } } = await dbClient.auth.getUser();
+    if (!user) return;
+
+    let avatarUrl = null;
+
+if (fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        
+        // 1. CLEANUP LOGIC: Same as before
+        const { data: allFiles } = await dbClient.storage.from('avatars').list('');
+        if (allFiles) {
+            const filesToRemove = allFiles.filter(f => f.name.startsWith(user.id));
+            if (filesToRemove.length > 0) {
+                const pathsToRemove = filesToRemove.map(f => f.name);
+                await dbClient.storage.from('avatars').remove(pathsToRemove);
+            }
+        }
+
+        // 2. UPLOAD: Get extension dynamically and create unique name
+        const fileExtension = file.name.split('.').pop(); // e.g., 'gif', 'mp4', 'png'
+        const newFileName = `${user.id}_${Date.now()}.${fileExtension}`;
+        
+        const { error: uploadError } = await dbClient.storage
+            .from('avatars')
+            .upload(newFileName, file);
+
+        if (uploadError) {
+            alert("Upload failed: " + uploadError.message);
+            return;
+        }
+
+        // 3. URL: Get the public URL
+        const { data } = dbClient.storage.from('avatars').getPublicUrl(newFileName);
+        avatarUrl = data.publicUrl;
+        
+        console.log("Database will be updated with:", avatarUrl);
+    }
+    // 4. UPDATE DATABASE
+    const updatePayload = { display_name: name };
+    if (avatarUrl) {
+        updatePayload.avatar_url = avatarUrl;
+    }
+
+    const { error: dbError } = await dbClient
+        .from('profiles')
+        .update(updatePayload)
+        .eq('id', user.id);
+
+    if (dbError) {
+        alert("Database update failed: " + dbError.message);
+    } else {
+        alert("Settings saved!");
+        // Force refresh UI after saving
+        location.reload(); 
+    }
+}
+function saveAutoMuteSetting() {
+    const isChecked = document.getElementById('autoMuteSetting').checked;
+    localStorage.setItem('autoMuteSetting', isChecked);
+}
+
+// 2. The Engine: This is what you call whenever a user selects/focuses a stream
+function enforceMutePolicy(activePlayerId) {
+    // Only run if the user actually checked the box
+    if (localStorage.getItem('autoMuteSetting') !== 'true') return;
+
+    // Assuming you keep your players in an array or a way to access them
+    // You need to call .setMuted(true) on everyone EXCEPT the one they picked
+    window.allTwitchPlayers.forEach(player => {
+        if (player.id === activePlayerId) {
+            player.setMuted(false); // Unmute the one they are watching
+        } else {
+            player.setMuted(true);  // Mute all the others
+        }
+    });
+}
+// Helper to render media based on URL or DataURL
+function renderMedia(containerInput, source) {
+    // If a string ID is passed, find the element; otherwise, use the element provided
+    const container = typeof containerInput === 'string' 
+        ? document.getElementById(containerInput) 
+        : containerInput;
+
+    if (!container) {
+        console.error("renderMedia: Could not find container element.");
+        return;
+    }
+
+    container.innerHTML = ''; // Clear existing
+    
+    // Check if it's a video
+    const isVideo = source.match(/\.(mp4|mov|webm)$/i) || source.startsWith('data:video');
+    
+    if (isVideo) {
+        const video = document.createElement('video');
+        video.src = source;
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.style.width = "100%";
+        video.style.height = "100%";
+        video.style.borderRadius = "50%";
+        video.style.objectFit = "cover";
+        container.appendChild(video);
+    } else {
+        const img = document.createElement('img');
+        img.src = source;
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.borderRadius = "50%";
+        img.style.objectFit = "cover";
+        container.appendChild(img);
+    }
+}
+
+async function loadAccountTab() {
+    const { data: { user } } = await dbClient.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await dbClient
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+    if (profile) {
+        const nameInput = document.getElementById('displayNameInput');
+        if (nameInput) nameInput.value = profile.display_name || "";
+        
+        // Pass the ID string here
+        renderMedia('profilePreview', profile.avatar_url || "https://via.placeholder.com/100");
+    }
+}
+
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            // Pass the ID string here
+            renderMedia('profilePreview', e.target.result);
+        };
+        
+        reader.readAsDataURL(input.files[0]);
+    }
+}    
+</script>
+<div id="unifiedSettingsModal" class="settings-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>⚙️ Settings & Profile</h2>
+      <button class="modal-close" onclick="closeUnifiedModal()">&times;</button>
+    </div>
+    
+    <div class="modal-tabs">
+      <button class="tab-btn active" onclick="switchTab('app', this)">App</button>
+      <button class="tab-btn" onclick="switchTab('account', this)">Account</button>
+    </div>
+
+    <div class="modal-body">
+      <div id="tab-app" class="tab-content active">
+        <div class="settings-option">
+          <label>
+            <input type="checkbox" id="autoMuteSetting" onchange="saveAutoMuteSetting()"> 
+            Auto-mute background streams
+          </label>
+        </div>
+        <div class="settings-option">
+          <label>Default Stream Quality:</label>
+          <select id="qualitySetting" style="width:100%; padding:8px; background:#2a2a30; color:#fff;">
+            <option value="1080p">1080p</option>
+            <option value="720p">720p</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="tab-account" class="tab-content">
+        <div class="settings-option" style="text-align: center; margin-bottom: 15px;">
+          <div id="profilePreview" 
+               style="width: 150px; height: 150px; border-radius: 50%; border: 2px solid #6441a5; overflow: hidden; display: inline-block;">
+          </div>
+        </div>
+        
+        <div class="settings-option">
+          <label>Profile Picture:</label>
+          <input type="file" id="avatarUpload" accept="image/*,video/*" onchange="previewAvatar(this)">
+        </div>
+        
+        <div class="settings-option">
+          <label>Display Name:</label>
+          <input type="text" id="displayNameInput" placeholder="Enter new name...">
+        </div>
+        
+        <button class="apply-btn" onclick="saveAccountSettings()">Save Profile</button>
+      </div> 
+      </div> 
+    </div> 
+</div>
 </body>
 </html>
 
