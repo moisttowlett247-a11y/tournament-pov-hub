@@ -597,6 +597,12 @@ header h1 { font-size: 1.1rem; }
     </style>
 </head>
 <body>
+    <body style="margin: 0;">
+    <div id="loader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 99999; display: flex; justify-content: center; align-items: center; color: white;">
+        Checking Access...
+    </div>
+
+    </body>
     <div class="app-container">
         <aside class="sidebar">
             <div class="sidebar-header">
@@ -622,13 +628,39 @@ header h1 { font-size: 1.1rem; }
       <div id="loggedInAdminForm" style="display: none; flex-direction: column; gap: 6px;">
         <p style="font-size: 0.8rem; color: #adadb8; margin-bottom: 4px;">Logged in as: <span id="activeAdminEmail" style="color: #fff; font-weight: bold;"></span></p>
         
-        <!-- VISUAL PANEL ATTACHMENT ACTION DECK WRAPPER -->
-        <div id="adminControlsContainer" style="display: none; margin-bottom: 6px;">
-          <button onclick="openDeployModal()" style="width: 100%; background-color: #22c55e; color: #fff; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.2s; margin-bottom: 8px;">
-            ➕ Deploy Streamer
-          </button>
-        </div>
+<div id="adminControlsContainer" style="display: none; margin-bottom: 6px;">
+    <button class="nav-btn" 
+            onclick="document.getElementById('dashboardModal').style.display = 'flex'" 
+            style="width: 100%; background-color: #6441a5; color: #fff; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;">
+        ⚙️ Dashboard
+    </button>
+</div>
+
+<div id="dashboardModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; margin: 0 !important; padding: 0 !important;">
+    <div style="background: #1a1a1d; padding: 20px; border-radius: 8px; border: 1px solid #6441a5; width: 300px; color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h3 style="margin-top: 0; margin-bottom: 15px; text-align: center;">Developer Dashboard</h3>
         
+        <button onclick="openDeployModal(); closeDashboardModal();" 
+                style="display: block; width: 100%; padding: 10px; margin-bottom: 10px; background: #6441a5; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; font-weight: bold;">
+            ➕ Deploy Streamer
+        </button>
+        
+        <button onclick="document.designMode = 'on'; closeDashboardModal(); alert('Design Mode ON: You can now click and edit text/elements directly on the page. Refresh to reset.');" 
+                style="display: block; width: 100%; padding: 10px; margin-bottom: 10px; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; font-weight: bold;">
+            🎨 Edit Layout
+        </button>
+
+        <button onclick="openUserList()" 
+                style="display: block; width: 100%; padding: 10px; margin-bottom: 10px; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; font-weight: bold;">
+            👥 Manage Users
+        </button>
+        
+        <button onclick="closeDashboardModal()" 
+                style="display: block; width: 100%; padding: 10px; background: transparent; color: #888; border: 1px solid #444; cursor: pointer; border-radius: 4px;">
+            Close
+        </button>
+    </div>
+</div>
         <button onclick="handleAdminLogout()" style="width: 100%; background-color: #ef4444; color: #fff; border: none; padding: 6px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem;">Sign Out</button>
       </div>
 </div>
@@ -794,6 +826,30 @@ header h1 { font-size: 1.1rem; }
   #bgHistoryAccordion[open] .accordion-arrow {
     transform: rotate(90deg);
   }
+  /* Dashboard Popout Styles */
+    .dashboard-menu {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+
+    .popout-menu button {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background: #2a2a30; 
+        color: #fff;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 4px;
+        margin-bottom: 2px;
+        font-size: 0.85rem;
+    }
+
+    .popout-menu button:hover {
+        background: #6441a5;
+    }
 </style>
 
 
@@ -820,6 +876,37 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
 } else {
     console.error("❌ Critical: Supabase library failed to bind from the CDN.");
 }
+
+async function checkUserStatus() {
+    const { data: { user } } = await dbClient.auth.getUser();
+    
+    // If not logged in, just show the site
+    if (!user) {
+        document.getElementById('loader').style.display = 'none';
+        return; 
+    }
+
+    const { data: profile } = await dbClient
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    // If banned, redirect them to a blocked page or show an error
+    if (profile && profile.role === 'banned') {
+        document.body.innerHTML = `
+            <div style="background: red; color: white; height: 100vh; display: flex; justify-content: center; align-items: center; font-family: sans-serif; font-size: 2rem;">
+                Access Denied: Account Banned.
+            </div>
+        `;
+        // Optional: Sign them out so they can't try again
+        await dbClient.auth.signOut();
+    } else {
+        // If not banned, show the site
+        document.getElementById('loader').style.display = 'none';
+    }
+}
+checkUserStatus();
 
 // Global Storage Tracking Keys
 const FAVORITE_TEAM_KEY = 'favoriteTeamId';
@@ -871,17 +958,17 @@ document.getElementById('autoMuteSetting').checked = savedSetting;
   } 
   
   try { 
-    // STEP 1: Fetch live cloud roster details from your Supabase database table 
+// STEP 1: Fetch live cloud roster details from your Supabase database table 
     const { data: cloudTeams, error } = await dbClient 
       .from('teams_data') 
-      .select('*'); 
+      .select('*')
+      .order('position', { ascending: true }); // <--- Add this line here
       
     if (error) { 
       console.error("Cloud synchronization database error:", error); 
       return; 
-    } 
-    
-    // STEP 2: Map the database table rows directly into your frontend memory array 
+    }
+
     // STEP 2: Map the database table rows directly into your frontend memory array 
     globalTeamsData = cloudTeams.map(team => ({ 
       id: team.id, 
@@ -1749,6 +1836,26 @@ async function clearBackgroundHistory() {
   renderBackgroundHistoryUI(); 
 } 
 
+async function deleteHistoryItem(event, index) {
+    event.stopPropagation(); 
+    if (!confirm("Remove this from history?")) return;
+
+    let history = getHistoryMetadata();
+    const item = history[index];
+
+    if (item.isStoredFile && typeof getDB === 'function') {
+        try {
+            const db = await getDB();
+            const tx = db.transaction("backgrounds", "readwrite");
+            tx.objectStore("backgrounds").delete(item.id);
+        } catch(e) { console.error("Error deleting from DB:", e); }
+    }
+
+    history.splice(index, 1);
+    localStorage.setItem('customBackgroundHistory', JSON.stringify(history));
+    await renderBackgroundHistoryUI();
+}
+
 async function resetBackground() { 
   if (confirm('Reset background to default?')) { 
     localStorage.removeItem(BG_KEY); 
@@ -1873,11 +1980,15 @@ document.addEventListener("DOMContentLoaded", () => {
         // Query current session state
         dbClient.auth.getSession().then(({ data: { session } }) => {
             updateAdminPanelUIState(session);
+            if (session) checkUserStatus(); // Check ban status on load
         });
 
         // Listen for realtime login/logout triggers natively
-        dbClient.auth.onAuthStateChange((_event, session) => {
+        dbClient.auth.onAuthStateChange((event, session) => {
             updateAdminPanelUIState(session);
+            if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+                checkUserStatus(); // Check ban status immediately on login
+            }
         });
     }
 });
@@ -2488,8 +2599,12 @@ async function renderBackgroundHistoryUI() {
            style="background-color: #121214; border: 1px solid #3a3a42; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: border-color 0.2s; height: 85px; overflow: hidden; position: relative;" 
            onmouseover="this.style.borderColor='#9146ff';" 
            onmouseout="this.style.borderColor='#3a3a42';"> 
-        <div style="width: 100%; height: 60px; background-color: #09090b; border-bottom: 1px solid #232329; overflow: hidden;">
+        <div style="width: 100%; height: 60px; background-color: #09090b; border-bottom: 1px solid #232329; overflow: hidden; position: relative;">
           ${visualPreviewHTML}
+          <button onclick="deleteHistoryItem(event, ${idx})" 
+                  style="position: absolute; top: 4px; right: 4px; background: rgba(255, 0, 0, 0.7); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;">
+            ✕
+          </button>
         </div>
         <div style="font-size: 0.65rem; color: #adadb8; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; width: 100%; padding: 4px 6px; font-weight: 500; background-color: #1a1a1e; box-sizing: border-box;">
           ${cleanLabel}
@@ -2500,7 +2615,6 @@ async function renderBackgroundHistoryUI() {
     container.insertAdjacentHTML('beforeend', cardHTML);
   }
 }
-
 async function loadBackground() {
     const savedBgMarker = localStorage.getItem(BG_KEY);
     const bgType = localStorage.getItem(BG_TYPE_KEY) || 'image';
@@ -2721,7 +2835,64 @@ function previewAvatar(input) {
         
         reader.readAsDataURL(input.files[0]);
     }
-}    
+}
+function toggleDashboard() {
+    const menu = document.getElementById('dashboardPopout');
+    menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+}
+
+// Optional: Close menu when clicking outside
+window.onclick = function(event) {
+    const menu = document.getElementById('dashboardPopout');
+    if (menu && !event.target.matches('.nav-btn') && !menu.contains(event.target)) {
+        menu.style.display = 'none';
+    }
+}
+function closeDashboardModal() {
+    document.getElementById('dashboardModal').style.display = 'none';
+}
+
+// Close if clicking outside the modal box
+window.onclick = function(event) {
+    const modal = document.getElementById('dashboardModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+}   
+// Function to fetch and display the user list
+async function openUserList() {
+    const { data: profiles, error } = await dbClient.from('profiles').select('*');
+    
+    if (error) return alert("Error loading users: " + error.message);
+
+    let userListHtml = profiles.map(user => `
+        <div style="border-bottom: 1px solid #444; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: white; font-size: 0.9rem;">${user.display_name || 'No Name'}</span>
+            <select onchange="updateUserRole('${user.id}', this.value)" style="background: #222; color: white; border: 1px solid #6441a5; padding: 5px;">
+                <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
+                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                <option value="banned" ${user.role === 'banned' ? 'selected' : ''}>Ban</option>
+            </select>
+        </div>
+    `).join('');
+
+    const modalDiv = document.querySelector('#dashboardModal > div');
+    modalDiv.innerHTML = `
+        <h3 style="color: white; text-align: center;">User Management</h3>
+        <div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;">${userListHtml}</div>
+        <button onclick="location.reload()" style="width: 100%; padding: 10px; background: #6441a5; color: white; border: none; cursor: pointer; border-radius: 4px;">Done (Refresh)</button>
+    `;
+}
+
+// Function to update the role in Supabase
+async function updateUserRole(userId, newRole) {
+    const { error } = await dbClient
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+        
+    if (error) alert("Failed to update: " + error.message);
+} 
 </script>
 <div id="unifiedSettingsModal" class="settings-modal">
   <div class="modal-content">
