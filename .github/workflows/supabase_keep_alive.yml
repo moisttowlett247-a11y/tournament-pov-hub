@@ -16,4 +16,4 @@ jobs:
           -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Content-Type: application/json" \
-          -d '{"pinged_at": "now()"}'
+          -d '{"id": 2}'
