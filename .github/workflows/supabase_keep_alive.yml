@@ -2,18 +2,18 @@ name: Supabase Keep Alive
 
 on:
   schedule:
-    # Runs every 3 days at midnight UTC to prevent the 7-day auto-pause
-    - cron: '0 0 */3 * *'
-  workflow_dispatch: # Allows you to trigger this manually anytime to test it
+    # Runs 4 times a day (at 00:00, 06:00, 12:00, and 18:00 UTC)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows manual triggers
 
 jobs:
   ping_supabase:
     runs-on: ubuntu-latest
     steps:
-      - name: Force a database write via PATCH
+      - name: Force a true database write via PATCH
         run: |
-          curl -X POST "https://axzeizuraxnkologrdtn.supabase.co/rest/v1/keep_alive" \
-          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-          -H "Content-Type: application/json" \
-          -d '{}'
+          curl -X PATCH "https://axzeizuraxnkologrdtn.supabase.co/rest/v1/keep_alive" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"pinged_at": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}'
