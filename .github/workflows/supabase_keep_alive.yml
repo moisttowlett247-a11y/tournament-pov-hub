@@ -8,7 +8,7 @@ on:
 jobs:
   # Primary attempt
   ping_supabase:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Force a true database write via PATCH
         run: |
@@ -23,7 +23,7 @@ jobs:
   ping_supabase_backup_1:
     needs: ping_supabase
     if: failure()
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - name: Force a true database write via PATCH (Windows Backup)
         shell: bash
@@ -39,7 +39,7 @@ jobs:
   ping_supabase_backup_2:
     needs: ping_supabase_backup_1
     if: failure()
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - name: Force a true database write via PATCH (Mac Backup)
         run: |
