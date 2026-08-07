@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Force a true database write via PATCH
         run: |
-          curl -X PATCH "https://axzeizuraxnkologrdtn.supabase.co/rest/v1/keep_alive?pinged_at=not.is.null" \
+          curl -X PATCH "https://axzeizuraxnkologrdtn.supabase.co/rest/v1/keep_alive?id=eq.1" \
           -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Content-Type: application/json" \
@@ -28,7 +28,7 @@ jobs:
       - name: Force a true database write via PATCH (Windows Backup)
         shell: bash
         run: |
-          curl -X PATCH "https://axzeizuraxnkologrdtn.supabase.co/rest/v1/keep_alive?pinged_at=not.is.null" \
+          curl -X PATCH "https://axzeizuraxnkologrdtn.supabase.co/rest/v1/keep_alive?id=eq.1" \
           -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Content-Type: application/json" \
@@ -43,7 +43,7 @@ jobs:
     steps:
       - name: Force a true database write via PATCH (Mac Backup)
         run: |
-          curl -X PATCH "https://axzeizuraxnkologrdtn.supabase.co/rest/v1/keep_alive?pinged_at=not.is.null" \
+          curl -X PATCH "https://axzeizuraxnkologrdtn.supabase.co/rest/v1/keep_alive?id=eq.1" \
           -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Content-Type: application/json" \
