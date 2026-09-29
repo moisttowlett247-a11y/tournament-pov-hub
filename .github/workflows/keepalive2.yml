@@ -1,0 +1,33 @@
+name: Prevent Repo Hibernation
+
+on:
+  schedule:
+    # Runs at minute 0 of every hour
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows you to trigger it manually
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create or update single-commit branch
+        run: |
+          git config --local user.email "github-actions[bot]@://github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Create an isolated branch with no history
+          git checkout --orphan keep-alive-activity
+          git rm -rf .
+          
+          # Create the dummy file with the latest timestamp
+          echo "Last kept alive: $(date)" > keepalive.txt
+          
+          # Commit and force-push to overwrite the branch every hour
+          git add keepalive.txt
+          git commit -m "chore: hourly automated keep-alive"
+          git push origin keep-alive-activity --force
